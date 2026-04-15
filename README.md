@@ -10,14 +10,14 @@
 
 | Feature | Description |
 |---|---|
-| 📤 Apple Health XML upload | Memory-safe streaming parser handles exports up to several GB |
-| 📊 HRV & ECG analysis | SDNN, RMSSD, LF/HF ratio, AFib detection, ST-deviation flagging |
-| 🌙 Sleep analysis | Deep / REM / core sleep breakdown from HealthKit data |
-| 🌿 TCM constitution scoring | Rule-based scoring across 9 constitution types |
-| 🤖 AI analysis (streaming) | LLM-generated report streamed in real time via SSE |
-| 💬 AI follow-up chat | Ask questions about your report; AI answers with full context |
-| 🖨 PDF report export | One-click bilingual report for sharing with your doctor |
-| 📜 Session history | All analyses saved and accessible for review |
+| Apple Health XML upload | Memory-safe streaming parser handles exports up to several GB |
+| HRV & ECG analysis | SDNN, RMSSD, LF/HF ratio, AFib detection, ST-deviation flagging |
+| Sleep analysis | Deep / REM / core sleep breakdown from HealthKit data |
+| TCM constitution scoring | Rule-based scoring across 9 constitution types |
+| AI analysis (streaming) | LLM-generated report streamed in real time via SSE |
+| AI follow-up chat | Ask questions about your report; AI answers with full context |
+| PDF report export | One-click bilingual report for sharing with your doctor |
+| Session history | All analyses saved and accessible for review |
 
 ---
 
@@ -122,8 +122,8 @@ Open `http://localhost:3000`.
 
 | Variable | Required | Description |
 |---|---|---|
-| `GROQ_API_KEY` | ✅ | Groq API key |
-| `JWT_SECRET` | ✅ | Random secret for signing JWTs — generate with `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `GROQ_API_KEY`| Groq API key |
+| `JWT_SECRET` | Random secret for signing JWTs — generate with `python -c "import secrets; print(secrets.token_hex(32))"` |
 | `GROQ_MODEL` | | Model name (default: `llama-3.3-70b-versatile`) |
 | `DATA_DIR` | | Path for session data (default: `./data`) |
 | `CORS_ORIGINS` | | Comma-separated allowed origins (default: `http://localhost:3000`) |
@@ -134,41 +134,8 @@ Open `http://localhost:3000`.
 
 | Variable | Required | Description |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | ✅ | Backend URL without trailing slash |
+| `NEXT_PUBLIC_API_URL`    | Backend URL without trailing slash |
 | `NEXT_PUBLIC_FIREBASE_*` | | Only needed if using Firebase Auth / Analytics |
-
----
-
-## Deployment
-
-### Backend → Google Cloud Run
-
-```bash
-# Build & push
-gcloud builds submit backend/ \
-  --tag REGION-docker.pkg.dev/PROJECT_ID/REPO/pulsebridge-api
-
-# Deploy (set env vars via --set-env-vars or Secret Manager)
-gcloud run deploy pulsebridge-api \
-  --image REGION-docker.pkg.dev/PROJECT_ID/REPO/pulsebridge-api:latest \
-  --region REGION \
-  --memory 2Gi \
-  --set-env-vars "GROQ_API_KEY=...,JWT_SECRET=...,CORS_ORIGINS=https://your-app.web.app"
-```
-
-### Frontend → Firebase Hosting
-
-```bash
-cd frontend
-npm run build          # outputs to frontend/out/
-
-cd ..
-firebase deploy --only hosting
-```
-
-### Other platforms
-
-The backend is a standard FastAPI app — it runs on Railway, Render, Fly.io, or any Docker host. The frontend is a fully static export and can be hosted on Vercel, Cloudflare Pages, or any static file server.
 
 ---
 
