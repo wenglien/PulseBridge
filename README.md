@@ -1,7 +1,7 @@
 # PulseBridge
 
 上傳 Apple Watch 的 ECG、HRV 與睡眠數據，結合五步症狀問卷，由 AI 生成融合中西醫觀點的個人化健康分析報告，並支援即時追問與一鍵匯出就醫 PDF。
-
+網頁版專案已上線：https://pulse-ai-d54fb.web.app/
 > Upload your Apple Watch ECG, HRV, and sleep data. Complete a five-step symptom questionnaire. Get a bilingual AI-generated health report that bridges Western biomarkers with Traditional Chinese Medicine — then ask follow-up questions or export a doctor-ready PDF in one click.
 
 ---
