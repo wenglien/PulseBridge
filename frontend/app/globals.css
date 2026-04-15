@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Brand: Jade (primary) ── */
+  --color-jade:           #0D7A66;
+  --color-jade-mid:       #1A9479;
+  --color-jade-subtle:    #E8F5F2;
+  --color-jade-border:    #9FD1C8;
+
+  /* ── Brand: Gold (accent) ── */
+  --color-gold:           #855D16;
+  --color-gold-subtle:    #FEF3DC;
+  --color-gold-border:    #D4A54A;
+
+  /* ── Legacy aliases (backward compat with inline usages) ── */
+  --color-tcm-red:        #B91C1C;
+  --color-tcm-red-light:  #e53e5e;
+  --color-tcm-gold:       #855D16;
+  --color-tcm-jade:       #0D7A66;
+  --color-tcm-jade-light: #1A9479;
+  --color-tcm-ink:        #111827;
+  --color-tcm-cream:      #FEF9F0;
+
+  /* ── Risk levels ── */
+  --color-risk-critical:  #dc2626;
+  --color-risk-high:      #ea580c;
+  --color-risk-medium:    #d97706;
+  --color-risk-low:       #16a34a;
+
+  /* ── Fonts ── */
+  --font-zh:      "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-display: "Noto Serif TC", "Songti TC", serif;
+}
+
+/* ── CSS custom properties ── */
+:root {
+  --bg:        #F0F4F8;
+  --surface:   #FFFFFF;
+  --border:    #E2E8F0;
+  --border-mid: #CBD5E1;
+  --text-1:    #111827;
+  --text-2:    #4B5563;
+  --text-3:    #9CA3AF;
+}
+
+/* ── Safe area (notch / home indicator) ── */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Base ── */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text-1);
+  font-family: var(--font-zh);
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+}
+
+/* ── Touch targets (min 44px) ── */
+button, a, [role="button"] {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* override for inline/text links */
+p a, li a, .text-link {
+  min-height: unset;
+  display: inline;
+}
+
+/* ── Card ── */
+.glass-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+/* ── Scrollbar (desktop only) ── */
+@media (pointer: fine) {
+  ::-webkit-scrollbar        { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track  { background: var(--bg); }
+  ::-webkit-scrollbar-thumb  { background: var(--border-mid); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+}
+
+/* ── Progress bar: indeterminate (gzip 等無法取得精確進度時) ── */
+@keyframes pb-indeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.pb-indeterminate-bar {
+  width: 35%;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--color-jade) 0%, var(--color-jade-mid) 50%, var(--color-jade) 100%);
+  animation: pb-indeterminate 1.35s ease-in-out infinite;
+}
+
+/* ── Constitution accent colors ── */
+.constitution-平和質 { --constitution-color: #16a34a; }
+.constitution-氣虛質 { --constitution-color: #d97706; }
+.constitution-陽虛質 { --constitution-color: #2563eb; }
+.constitution-陰虛質 { --constitution-color: #dc2626; }
+.constitution-痰濕質 { --constitution-color: #7c3aed; }
+.constitution-濕熱質 { --constitution-color: #ea580c; }
+.constitution-血瘀質 { --constitution-color: #9f1239; }
+.constitution-氣鬱質 { --constitution-color: #0891b2; }
+.constitution-特稟質 { --constitution-color: #c2410c; }
+
+/* ── Streaming cursor ── */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.cursor-blink::after {
+  content: '|';
+  animation: cursor-blink 1s step-end infinite;
+  color: var(--color-jade);
+}
+
+/* ── Focus ring ── */
+*:focus-visible {
+  outline: 2px solid var(--color-jade);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Prevent layout shift on scroll ── */
+@media (min-width: 768px) {
+  body {
+    overflow-y: scroll;
+  }
+}
+
+/* ── Smooth transitions ── */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
