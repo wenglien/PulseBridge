@@ -20,6 +20,7 @@ from core.csv_parser import (
 )
 from core.xml_stream_parser import scan_file, extract_records, DATA_TYPE_MAP
 from core.hrv_analyzer import compute_hrv_metrics, hrv_from_sdnn_records
+from core.ecg_analyzer import detect_r_peaks_and_hr
 from core.healthkit_parser import aggregate_sleep_by_date
 from models.health_data import (
     ExtractRequest, ManualHealthInput,
@@ -29,6 +30,10 @@ from models.health_data import (
 router = APIRouter(prefix="/health-data", tags=["health-data"])
 
 _MAX_CSV_BYTES = 20 * 1024 * 1024  # 20 MB per file
+
+# In-memory progress map for XML extract; keyed by session_id, value in [0, 1].
+# Single-process only — good enough for local / single-worker deployments.
+_extract_progress: dict[str, float] = {}
 
 
 @router.post("/upload-csv")
@@ -64,11 +69,11 @@ async def upload_csv(files: List[UploadFile] = File(...)):
                 csv_type = "heartrate"
 
         if csv_type == "ecg":
-            ecg_records = parse_ecg_csv(raw)
+            ecg_records.extend(parse_ecg_csv(raw))
         elif csv_type == "hrv":
-            hrv_sdnn_records = parse_hrv_csv(raw)
+            hrv_sdnn_records.extend(parse_hrv_csv(raw))
         else:
-            hr_records = parse_heartrate_csv(raw)
+            hr_records.extend(parse_heartrate_csv(raw))
 
     if not ecg_records and not hr_records and not hrv_sdnn_records:
         raise HTTPException(400, "無法從上傳的檔案中讀取任何健康資料，請確認欄位格式正確")
@@ -81,6 +86,10 @@ async def upload_csv(files: List[UploadFile] = File(...)):
         hrv_raw = hrv_from_sdnn_records(hrv_sdnn_records)
         if hrv_raw:
             hrv_data = HRVMetrics(**hrv_raw)
+            hrv_data.sdnn_series = [
+                {"timestamp": r.get("timestamp", ""), "value_ms": float(r.get("value_ms", 0))}
+                for r in hrv_sdnn_records if r.get("value_ms", 0) > 0
+            ]
     if hrv_data is None and hr_records:
         rr = rr_intervals_from_hr(hr_records)
         if rr:
@@ -88,17 +97,45 @@ async def upload_csv(files: List[UploadFile] = File(...)):
             if hrv_raw:
                 hrv_data = HRVMetrics(**hrv_raw)
 
+    # --- ECG list (cap at 50) ---
+    ecg_list = [ECGReading(**r) for r in ecg_records[:50]]
+
+    # --- HRV from native ECG voltages (fallback when no dedicated HRV file) ---
+    if hrv_data is None and ecg_list:
+        all_rr: list[float] = []
+        for ecg_r in ecg_list:
+            if len(ecg_r.voltage_measurements) >= ecg_r.sample_rate_hz:
+                peaks, _ = detect_r_peaks_and_hr(
+                    ecg_r.voltage_measurements, ecg_r.sample_rate_hz
+                )
+                if len(peaks) >= 3:
+                    rr_ms = [
+                        (peaks[i + 1] - peaks[i]) * 1000.0 / ecg_r.sample_rate_hz
+                        for i in range(len(peaks) - 1)
+                        if 333 < (peaks[i + 1] - peaks[i]) * 1000.0 / ecg_r.sample_rate_hz < 2000
+                    ]
+                    all_rr.extend(rr_ms)
+        if len(all_rr) >= 4:
+            hrv_raw = compute_hrv_metrics(all_rr)
+            if hrv_raw:
+                hrv_data = HRVMetrics(**hrv_raw)
+
     # --- Resting HR ---
     resting_hr = 0.0
     if hr_records:
         resting_hr = resting_hr_from_records(hr_records)
-    elif ecg_records:
-        bpms = [r["average_heart_rate"] for r in ecg_records if r["average_heart_rate"] > 0]
-        if bpms:
-            resting_hr = round(sum(bpms) / len(bpms), 1)
-
-    # --- ECG list (cap at 50) ---
-    ecg_list = [ECGReading(**r) for r in ecg_records[:50]]
+    elif ecg_list:
+        # Prefer R-peak detected HR; fall back to stored average
+        detected_hrs = []
+        for ecg_r in ecg_list:
+            if ecg_r.average_heart_rate > 0:
+                detected_hrs.append(ecg_r.average_heart_rate)
+            elif len(ecg_r.voltage_measurements) >= ecg_r.sample_rate_hz:
+                _, hr = detect_r_peaks_and_hr(ecg_r.voltage_measurements, ecg_r.sample_rate_hz)
+                if hr > 0:
+                    detected_hrs.append(hr)
+        if detected_hrs:
+            resting_hr = round(min(detected_hrs), 1)  # lowest detected = closest to resting
 
     health_data = HealthData(
         session_id=session_id,
@@ -156,6 +193,7 @@ async def manual_input(data: ManualHealthInput):
 
     health_data = HealthData(
         session_id=session_id,
+        age=data.age,
         hrv=hrv_data,
         sleep=sleep_list,
         resting_heart_rate=data.resting_heart_rate,
@@ -304,21 +342,30 @@ async def extract_xml(body: ExtractRequest):
     if not body.data_types:
         raise HTTPException(400, "請選擇至少一個資料類型")
 
+    # Progress callback: stores latest pct in a module-level dict for polling.
+    _extract_progress[body.session_id] = 0.0
+    def _on_progress(pct: float) -> None:
+        _extract_progress[body.session_id] = pct
+
     # Run CPU-intensive parsing in thread pool
-    raw = await asyncio.to_thread(
-        extract_records,
-        xml_path,
-        body.start_date,
-        body.end_date,
-        body.data_types,
-    )
+    try:
+        raw = await asyncio.to_thread(
+            extract_records,
+            xml_path,
+            body.start_date,
+            body.end_date,
+            body.data_types,
+            _on_progress,
+        )
+    finally:
+        _extract_progress[body.session_id] = 1.0
 
     # ── HRV ──────────────────────────────────────────────────────────────
     hrv_data: HRVMetrics | None = None
+    sdnn_records: list[dict] = []
     if raw.get("hrv"):
         # Prefer beat-by-beat RR intervals for real HRV computation
         all_bpms: list[float] = []
-        sdnn_records: list[dict] = []
         for r in raw["hrv"]:
             all_bpms.extend(r.get("beat_bpms", []))
             if r.get("value_ms", 0) > 0:
@@ -332,6 +379,11 @@ async def extract_xml(body: ExtractRequest):
             hrv_raw = hrv_from_sdnn_records(sdnn_records)
         if hrv_raw:
             hrv_data = HRVMetrics(**hrv_raw)
+            if sdnn_records:
+                hrv_data.sdnn_series = [
+                    {"timestamp": r["timestamp"], "value_ms": float(r["value_ms"])}
+                    for r in sdnn_records
+                ]
 
     # Fall back to estimating HRV from dense heart rate data
     if hrv_data is None and raw.get("heart_rate"):
@@ -384,6 +436,12 @@ async def extract_xml(body: ExtractRequest):
         "parsed":     health_data.model_dump(),
         "record_counts": counts,
     }
+
+
+@router.get("/extract-progress/{session_id}")
+async def extract_progress(session_id: str):
+    """Return the latest extract progress pct in [0, 1] for the given session."""
+    return {"pct": _extract_progress.get(session_id, 0.0)}
 
 
 # 必須註冊在 /scan/、/extract 等固定路徑之後，否則「scan」會被當成 {session_id}

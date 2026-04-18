@@ -56,3 +56,6 @@ class QuestionnaireResponse(BaseModel):
     pain: PainSymptoms = Field(default_factory=PainSymptoms)
     sleep: SleepSymptoms = Field(default_factory=SleepSymptoms)
     additional_notes: str = ""
+    # Optional ZYYXH/T157-2009 王琦 60-item scale answers (item_id → 1–5).
+    # When present, the formal transformed-score scorer overrides symptom-based scoring.
+    wangqi_answers: dict[str, int] = Field(default_factory=dict)

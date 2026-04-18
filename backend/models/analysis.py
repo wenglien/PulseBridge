@@ -44,6 +44,7 @@ class HealthRecommendation(BaseModel):
     content_zh: str
     priority: Literal["high", "medium", "low"] = "medium"
     evidence_basis: Literal["tcm", "western", "integrative"] = "integrative"
+    citations: list[str] = Field(default_factory=list)
 
 
 class WesternFlags(BaseModel):
@@ -128,11 +129,28 @@ class HRVRiskAssessment(BaseModel):
     evidence: list[str] = Field(default_factory=list)
 
 
+class HRVReferenceRange(BaseModel):
+    age_bracket: str = "adult (age unknown)"
+    sdnn_p25: float = 0.0
+    sdnn_p50: float = 0.0
+    sdnn_p75: float = 0.0
+    rmssd_p25: float = 0.0
+    rmssd_p50: float = 0.0
+    rmssd_p75: float = 0.0
+    lf_hf_normal_low: float = 1.0
+    lf_hf_normal_high: float = 2.5
+    sdnn_percentile: Optional[int] = None
+    rmssd_percentile: Optional[int] = None
+    sources: list[str] = Field(default_factory=list)
+    confidence: Literal["low", "medium", "high"] = "medium"
+
+
 class HRVAnalysis(BaseModel):
     time_domain: HRVTimeDomain = Field(default_factory=HRVTimeDomain)
     frequency_domain: HRVFrequencyDomain = Field(default_factory=HRVFrequencyDomain)
     autonomic_balance: HRVAutonomicBalance = Field(default_factory=HRVAutonomicBalance)
     hrv_risk_assessment: HRVRiskAssessment = Field(default_factory=HRVRiskAssessment)
+    reference_range: Optional[HRVReferenceRange] = None
 
 
 class IntegratedCardiacAssessment(BaseModel):
@@ -149,6 +167,7 @@ class DataDrivenRecommendation(BaseModel):
     why_zh: str
     target_metric: str = ""
     actions: list[str] = Field(default_factory=list)
+    citations: list[str] = Field(default_factory=list)
 
 
 class MetricExplanation(BaseModel):
@@ -160,6 +179,7 @@ class MetricExplanation(BaseModel):
     improvement_goal_zh: str
     actionable_steps: list[str] = Field(default_factory=list)
     priority: Literal["high", "medium", "low"] = "medium"
+    citations: list[str] = Field(default_factory=list)
 
 
 class AnalysisResult(BaseModel):
@@ -179,6 +199,7 @@ class AnalysisResult(BaseModel):
     claude_summary_zh: str = ""
     claude_summary_en: str = ""
     western_flags: WesternFlags = Field(default_factory=WesternFlags)
+    references: dict[str, str] = Field(default_factory=dict)
     raw_claude_response: str = ""
     status: Literal["pending", "analyzing", "completed", "error"] = "pending"
     error_message: str = ""
