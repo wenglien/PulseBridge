@@ -9,7 +9,15 @@ class ECGReading(BaseModel):
     average_heart_rate: float = 0.0
     classification: str = "notDetermined"
     voltage_measurements: list[float] = Field(default_factory=list)
+    sample_rate_hz: int = 512
     lead_type: str = "AppleWatchSimilarToLeadI"
+    symptoms: str = ""
+    device: str = ""
+
+
+class SDNNRecord(BaseModel):
+    timestamp: str
+    value_ms: float
 
 
 class HRVMetrics(BaseModel):
@@ -22,6 +30,7 @@ class HRVMetrics(BaseModel):
     mean_rr: float = 0.0
     rr_intervals: list[float] = Field(default_factory=list)
     timestamps: list[str] = Field(default_factory=list)
+    sdnn_series: list[SDNNRecord] = Field(default_factory=list)
 
 
 class SleepStage(BaseModel):
@@ -45,6 +54,7 @@ class SleepData(BaseModel):
 class HealthData(BaseModel):
     session_id: str
     uploaded_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    age: Optional[int] = None
     ecg_readings: list[ECGReading] = Field(default_factory=list)
     hrv: Optional[HRVMetrics] = None
     sleep: list[SleepData] = Field(default_factory=list)
@@ -63,6 +73,7 @@ class ExtractRequest(BaseModel):
 
 class ManualHealthInput(BaseModel):
     session_id: Optional[str] = None
+    age: Optional[int] = None
     resting_heart_rate: float = 0.0
     sdnn: float = 0.0
     rmssd: float = 0.0

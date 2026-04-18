@@ -23,6 +23,7 @@ from core.ecg_analyzer import (
     summarize_hrv,
 )
 from core.tcm_scorer import score_constitutions
+from core.red_flags import detect_red_flags
 from core.claude_engine import stream_analysis, build_analysis_result_from_claude
 
 
@@ -41,10 +42,28 @@ async def run_full_analysis(
     if health_data.hrv and health_data.hrv.sdnn > 0:
         ecg_alerts.extend(analyze_hrv_risks(health_data.hrv))
 
+    # Red-flag guardrails — prepended so they surface at the top of the UI.
+    red_flag_alerts = detect_red_flags(
+        questionnaire, health_data.hrv, health_data.ecg_readings
+    )
+    ecg_alerts = red_flag_alerts + ecg_alerts
+
     ecg_analysis    = summarize_ecg(health_data.ecg_readings, ecg_alerts)
-    hrv_analysis    = summarize_hrv(health_data.hrv, ecg_alerts)
+    hrv_analysis    = summarize_hrv(health_data.hrv, ecg_alerts, age=health_data.age)
     western_flags   = compute_western_flags(health_data.ecg_readings, health_data.hrv, ecg_alerts)
     integrated      = build_integrated_cardiac_assessment(ecg_analysis, hrv_analysis, ecg_alerts)
+    # Ensure red flags are reflected in the integrated assessment.
+    if red_flag_alerts:
+        for alert in red_flag_alerts:
+            if alert.title_zh not in integrated.red_flags:
+                integrated.red_flags.insert(0, alert.title_zh)
+        if any(a.risk_level == "critical" for a in red_flag_alerts):
+            integrated.cardiac_risk_level = "critical"
+            integrated.follow_up_priority = "immediate"
+        elif integrated.cardiac_risk_level in {"low", "medium"}:
+            integrated.cardiac_risk_level = "high"
+            if integrated.follow_up_priority == "routine":
+                integrated.follow_up_priority = "1_week"
     tcm_scores      = score_constitutions(health_data, questionnaire)
 
     full_response = ""

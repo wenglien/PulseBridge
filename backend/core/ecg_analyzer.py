@@ -17,6 +17,7 @@ from models.analysis import (
     HRVAnalysis,
     HRVAutonomicBalance,
     HRVFrequencyDomain,
+    HRVReferenceRange,
     HRVRiskAssessment,
     HRVTimeDomain,
     IntegratedCardiacAssessment,
@@ -24,6 +25,7 @@ from models.analysis import (
     WesternFlags,
 )
 from models.health_data import ECGReading, HRVMetrics
+from core.hrv_reference import get_reference, percentile_rank
 
 # HRV clinical thresholds (short-term, 5-minute measurements)
 HRV_THRESHOLDS = {
@@ -76,7 +78,15 @@ def analyze_ecg(ecg_readings: list[ECGReading]) -> list[RiskAlert]:
         ))
 
     # 3. Heart rate extremes
-    hr_values = [r.average_heart_rate for r in ecg_readings if r.average_heart_rate > 0]
+    # Prefer stored average_heart_rate; fall back to R-peak detection from voltages
+    hr_values: list[float] = []
+    for r in ecg_readings:
+        if r.average_heart_rate > 0:
+            hr_values.append(r.average_heart_rate)
+        elif len(r.voltage_measurements) >= r.sample_rate_hz:
+            _, computed_hr = detect_r_peaks_and_hr(r.voltage_measurements, r.sample_rate_hz)
+            if computed_hr > 0:
+                hr_values.append(computed_hr)
     if hr_values:
         avg_hr = np.mean(hr_values)
         min_hr = min(hr_values)
@@ -110,6 +120,88 @@ def analyze_ecg(ecg_readings: list[ECGReading]) -> list[RiskAlert]:
     alerts.extend(st_alerts)
 
     return alerts
+
+
+def detect_r_peaks_and_hr(
+    voltages: list[float],
+    sample_rate: int = 512,
+) -> tuple[list[int], float]:
+    """
+    Simplified Pan-Tompkins R-peak detector.
+
+    Returns (peak_indices, average_hr_bpm).
+    Works on a single 30-second Apple Watch ECG trace (15 360 samples at 512 Hz).
+    """
+    if len(voltages) < sample_rate:           # need at least 1 second
+        return [], 0.0
+
+    sig = np.array(voltages, dtype=np.float64)
+
+    # 1. Bandpass filter: keep 5–40 Hz (removes baseline wander + high-freq noise)
+    #    Implemented via a simple difference (derivative) approach to avoid scipy dependency.
+    #    For more accuracy scipy.signal.butter + filtfilt is preferred but optional.
+    try:
+        from scipy.signal import butter, filtfilt  # type: ignore
+        nyq = sample_rate / 2.0
+        lo, hi = 5.0 / nyq, min(40.0 / nyq, 0.99)
+        b, a = butter(2, [lo, hi], btype="band")
+        filtered = filtfilt(b, a, sig)
+    except Exception:
+        # Fallback: simple derivative-based differencing
+        filtered = np.diff(sig, prepend=sig[0])
+
+    # 2. Squaring to emphasise peaks
+    squared = filtered ** 2
+
+    # 3. Moving-window integration (150 ms window)
+    win = max(1, int(0.15 * sample_rate))
+    kernel = np.ones(win) / win
+    integrated = np.convolve(squared, kernel, mode="same")
+
+    # 4. Adaptive threshold (60% of max in the integrated signal)
+    threshold = 0.6 * np.max(integrated)
+
+    # 5. Find peaks with minimum refractory period of 200 ms
+    refractory = int(0.20 * sample_rate)
+    peaks: list[int] = []
+    i = 0
+    above = False
+    local_max_val = 0.0
+    local_max_idx = 0
+
+    while i < len(integrated):
+        if integrated[i] > threshold:
+            if not above:
+                above = True
+                local_max_val = integrated[i]
+                local_max_idx = i
+            elif integrated[i] > local_max_val:
+                local_max_val = integrated[i]
+                local_max_idx = i
+        else:
+            if above:
+                # Enforce refractory period
+                if not peaks or (local_max_idx - peaks[-1]) >= refractory:
+                    peaks.append(local_max_idx)
+                above = False
+        i += 1
+
+    if len(peaks) < 2:
+        return peaks, 0.0
+
+    # 6. Compute average HR from RR intervals (discard physiologically impossible ones)
+    rr_samples = np.diff(peaks)
+    valid_rr = rr_samples[
+        (rr_samples > int(0.33 * sample_rate)) &   # < 180 bpm
+        (rr_samples < int(2.0  * sample_rate))      # > 30 bpm
+    ]
+    if len(valid_rr) == 0:
+        return peaks, 0.0
+
+    mean_rr_sec = float(np.mean(valid_rr)) / sample_rate
+    avg_hr = round(60.0 / mean_rr_sec, 1)
+
+    return peaks, avg_hr
 
 
 def _analyze_st_segments(ecg_readings: list[ECGReading]) -> list[RiskAlert]:
@@ -166,7 +258,7 @@ def summarize_ecg(ecg_readings: list[ECGReading], alerts: list[RiskAlert]) -> EC
     usable_readings = 0
     inconclusive_readings = 0
     afib_count = 0
-    hr_values = [r.average_heart_rate for r in ecg_readings if r.average_heart_rate > 0]
+    hr_values: list[float] = []
     st_deviations: list[float] = []
 
     for reading in ecg_readings:
@@ -178,6 +270,16 @@ def summarize_ecg(ecg_readings: list[ECGReading], alerts: list[RiskAlert]) -> EC
             usable_readings += 1
         if cls == "atrialFibrillation":
             afib_count += 1
+
+        # Collect heart rate (prefer stored value, fall back to R-peak detection)
+        if reading.average_heart_rate > 0:
+            hr_values.append(reading.average_heart_rate)
+        elif len(reading.voltage_measurements) >= reading.sample_rate_hz:
+            _, computed_hr = detect_r_peaks_and_hr(
+                reading.voltage_measurements, reading.sample_rate_hz
+            )
+            if computed_hr > 0:
+                hr_values.append(computed_hr)
 
         if len(reading.voltage_measurements) >= 300:
             try:
@@ -340,7 +442,11 @@ def analyze_hrv_risks(hrv: HRVMetrics) -> list[RiskAlert]:
     return alerts
 
 
-def summarize_hrv(hrv: Optional[HRVMetrics], alerts: list[RiskAlert]) -> HRVAnalysis:
+def summarize_hrv(
+    hrv: Optional[HRVMetrics],
+    alerts: list[RiskAlert],
+    age: Optional[int] = None,
+) -> HRVAnalysis:
     """Build a data-oriented HRV summary."""
     if hrv is None or hrv.sdnn <= 0:
         return HRVAnalysis(
@@ -352,6 +458,7 @@ def summarize_hrv(hrv: Optional[HRVMetrics], alerts: list[RiskAlert]) -> HRVAnal
                 confidence="low",
                 evidence=["無有效 HRV 數據"],
             ),
+            reference_range=HRVReferenceRange(**get_reference(age)),
         )
 
     evidence: list[str] = []
@@ -402,6 +509,25 @@ def summarize_hrv(hrv: Optional[HRVMetrics], alerts: list[RiskAlert]) -> HRVAnal
     else:
         recovery_state = "good"
 
+    ref_data = get_reference(age)
+    # Approximate user's percentile within the age bracket.
+    from core.hrv_reference import _RANGES, _GENERAL_ADULT  # type: ignore[attr-defined]
+    bracket_stats = _GENERAL_ADULT
+    if age:
+        for (lo, hi), vals in _RANGES:
+            if lo <= age <= hi:
+                bracket_stats = vals
+                break
+    ref_data["sdnn_percentile"] = percentile_rank(
+        hrv.sdnn, bracket_stats["sdnn_mean"], bracket_stats["sdnn_sd"]
+    )
+    ref_data["rmssd_percentile"] = percentile_rank(
+        hrv.rmssd, bracket_stats["rmssd_mean"], bracket_stats["rmssd_sd"]
+    )
+    evidence.append(
+        f"相對 {ref_data['age_bracket']} 年齡層：SDNN 約第 {ref_data['sdnn_percentile']} 百分位"
+    )
+
     return HRVAnalysis(
         time_domain=HRVTimeDomain(
             sdnn_ms=round(hrv.sdnn, 1),
@@ -424,6 +550,7 @@ def summarize_hrv(hrv: Optional[HRVMetrics], alerts: list[RiskAlert]) -> HRVAnal
             confidence="high",
             evidence=evidence,
         ),
+        reference_range=HRVReferenceRange(**ref_data),
     )
 
 

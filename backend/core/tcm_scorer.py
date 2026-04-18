@@ -7,6 +7,7 @@ Based on the Chinese national standard: 中醫體質分類與判定 (GB/T 21751-
 from models.health_data import HealthData, HRVMetrics, SleepData
 from models.questionnaire import QuestionnaireResponse
 from models.analysis import ConstitutionScore, ConstitutionType
+from core import wangqi_scorer
 
 
 # Symptom → Constitution weight map
@@ -55,7 +56,29 @@ def score_constitutions(
     """
     Compute scores for all 9 TCM constitution types.
     Returns sorted list (highest score first).
+
+    If the questionnaire contains ZYYXH/T157-2009 王琦 60-item answers,
+    the formal 轉化分 scorer is used and its judgments are reflected in
+    the confidence field. Otherwise, symptom + HRV + sleep heuristics are used.
     """
+    if questionnaire.wangqi_answers:
+        transformed = wangqi_scorer.score_all(questionnaire.wangqi_answers)
+        verdicts = wangqi_scorer.judge(transformed)
+        scores: list[ConstitutionScore] = []
+        for type_name, score in transformed.items():
+            verdict = verdicts.get(type_name, "否")
+            confidence = "high" if verdict == "是" else "medium" if verdict in ("基本是", "傾向是") else "low"
+            indicators = _get_key_indicators(type_name, health_data.hrv, questionnaire, health_data.sleep)
+            if verdict != "否":
+                indicators.insert(0, f"王琦量表判定：{verdict}")
+            scores.append(ConstitutionScore(
+                type=ConstitutionType(type_name),
+                score=score,
+                confidence=confidence,
+                key_indicators=indicators[:5],
+            ))
+        return sorted(scores, key=lambda x: x.score, reverse=True)
+
     raw_scores: dict[str, float] = {t: 0.0 for t in ALL_TYPES}
 
     # --- 1. HRV/physiological scoring (max ~40 pts) ---

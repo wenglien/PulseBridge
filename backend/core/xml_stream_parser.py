@@ -109,11 +109,39 @@ def scan_file(xml_path: Path) -> dict:
 # Phase 2 — selective iterparse extraction
 # ---------------------------------------------------------------------------
 
+class _ProgressReader:
+    """File-like wrapper that reports byte-position progress via callback."""
+    def __init__(self, path: Path, cb):
+        import os
+        self._fh = open(path, "rb")
+        self._total = os.fstat(self._fh.fileno()).st_size or 1
+        self._cb = cb
+        self._last_emit = -1.0
+
+    def read(self, size: int = -1) -> bytes:
+        data = self._fh.read(size)
+        pct = self._fh.tell() / self._total
+        if pct - self._last_emit >= 0.01:
+            try:
+                self._cb(min(pct, 0.99))
+            except Exception:
+                pass
+            self._last_emit = pct
+        return data
+
+    def readable(self) -> bool:
+        return True
+
+    def close(self):
+        self._fh.close()
+
+
 def extract_records(
     xml_path: Path,
     start_date: str,        # "YYYY-MM-DD"
     end_date:   str,        # "YYYY-MM-DD"
     data_types: list[str],  # subset of DATA_TYPE_MAP keys (+ "ecg")
+    progress_cb=None,       # optional callable(pct: float in [0,1])
 ) -> dict[str, list]:
     """
     Stream through the XML with iterparse, keeping only records whose
@@ -121,6 +149,9 @@ def extract_records(
 
     Memory: each processed element is detached from the root and cleared,
     so RAM stays constant regardless of file size.
+
+    If `progress_cb` is provided, it is called with a float in [0, 1] about
+    every 1% of bytes read; it is also invoked once with 1.0 on completion.
     """
     wanted_hk: dict[str, str] = {
         DATA_TYPE_MAP[k]: k
@@ -131,33 +162,46 @@ def extract_records(
 
     results: dict[str, list] = {k: [] for k in data_types}
 
-    # iterparse with both events so we can capture the root on "start"
-    context = ET.iterparse(str(xml_path), events=("start", "end"))
-    event, root = next(context)   # ("start", <HealthData>)
+    if progress_cb is not None:
+        file_obj = _ProgressReader(xml_path, progress_cb)
+    else:
+        file_obj = open(xml_path, "rb")
 
-    for event, elem in context:
-        if event != "end" or elem.tag not in _TOP_LEVEL:
-            continue
+    try:
+        context = ET.iterparse(file_obj, events=("start", "end"))
+        event, root = next(context)   # ("start", <HealthData>)
 
-        try:
-            if elem.tag == "Record":
-                rec_type = elem.get("type", "")
-                user_key = wanted_hk.get(rec_type)
-                if user_key:
+        for event, elem in context:
+            if event != "end" or elem.tag not in _TOP_LEVEL:
+                continue
+
+            try:
+                if elem.tag == "Record":
+                    rec_type = elem.get("type", "")
+                    user_key = wanted_hk.get(rec_type)
+                    if user_key:
+                        sd = elem.get("startDate", "")[:10]
+                        if start_date <= sd <= end_date:
+                            results[user_key].append(_parse_record(elem, rec_type))
+
+                elif elem.tag == "ECGSample" and want_ecg:
                     sd = elem.get("startDate", "")[:10]
                     if start_date <= sd <= end_date:
-                        results[user_key].append(_parse_record(elem, rec_type))
+                        results["ecg"].append(_parse_ecg(elem))
+            finally:
+                # Always detach from root to free memory
+                try:
+                    root.remove(elem)
+                except ValueError:
+                    pass
+    finally:
+        file_obj.close()
 
-            elif elem.tag == "ECGSample" and want_ecg:
-                sd = elem.get("startDate", "")[:10]
-                if start_date <= sd <= end_date:
-                    results["ecg"].append(_parse_ecg(elem))
-        finally:
-            # Always detach from root to free memory
-            try:
-                root.remove(elem)
-            except ValueError:
-                pass
+    if progress_cb is not None:
+        try:
+            progress_cb(1.0)
+        except Exception:
+            pass
 
     return results
 
