@@ -2,10 +2,12 @@
 import { useState } from "react"
 import type { MetricExplanation } from "@/types/analysis"
 import { MetricRangeMeter } from "@/components/charts/MetricRangeMeter"
+import { CitationChips } from "@/components/analysis/CitationChips"
 import { cn } from "@/lib/utils"
 
 interface MetricExplanationPanelProps {
   items: MetricExplanation[]
+  references?: Record<string, string>
 }
 
 function priorityStyle(priority: MetricExplanation["priority"]): string {
@@ -26,7 +28,7 @@ function priorityDot(priority: MetricExplanation["priority"]): string {
   return "bg-[#0D7A66]"
 }
 
-export function MetricExplanationPanel({ items }: MetricExplanationPanelProps) {
+export function MetricExplanationPanel({ items, references }: MetricExplanationPanelProps) {
   const [expandedKey, setExpandedKey] = useState<string | null>(
     // Auto-expand first high-priority item
     items.find((i) => i.priority === "high")?.metric_key ?? null,
@@ -111,6 +113,8 @@ export function MetricExplanationPanel({ items }: MetricExplanationPanelProps) {
                         <p className="text-sm text-gray-700 leading-relaxed">{text}</p>
                       </div>
                     ))}
+
+                    <CitationChips codes={item.citations} references={references} />
 
                     {item.actionable_steps.length > 0 && (
                       <div>

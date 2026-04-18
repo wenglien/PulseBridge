@@ -125,6 +125,9 @@ export const api = {
       body: JSON.stringify({ session_id: sessionId, start_date: startDate, end_date: endDate, data_types: dataTypes }),
     }),
 
+  extractProgress: (sessionId: string): Promise<{ pct: number }> =>
+    request(`/api/health-data/extract-progress/${sessionId}`),
+
   addEcgCsv: (sessionId: string, file: File): Promise<{ session_id: string; ecg_count: number }> => {
     const form = new FormData()
     form.append("session_id", sessionId)

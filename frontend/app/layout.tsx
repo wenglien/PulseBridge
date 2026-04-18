@@ -46,7 +46,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-TW" className="h-full">
-      <body className="min-h-full flex flex-col bg-[#F0F4F8] text-gray-900 antialiased">
+      <head>
+        <script
+          // Inline, pre-hydration theme init to avoid light/dark flash.
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-[var(--bg)] text-[var(--text-1)] antialiased">
         <FirebaseAnalytics />
         <Navbar />
         <div className="flex-1 pb-16 md:pb-0">

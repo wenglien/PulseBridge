@@ -4,11 +4,14 @@ import { useEffect, useState, Suspense } from "react"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { StreamingAnalysis } from "@/components/analysis/StreamingAnalysis"
 import { HRVMetricsPanel } from "@/components/analysis/HRVMetricsPanel"
+import { HRVTrendChart } from "@/components/charts/HRVTrendChart"
 import { ECGSummaryPanel } from "@/components/analysis/ECGSummaryPanel"
 import { SleepSummaryCard } from "@/components/analysis/SleepSummaryCard"
 import { RiskAlertBanner } from "@/components/analysis/RiskAlertBanner"
 import { RecommendationList } from "@/components/analysis/RecommendationList"
 import { MetricExplanationPanel } from "@/components/analysis/MetricExplanationPanel"
+import { CitationChips } from "@/components/analysis/CitationChips"
+import { ReferencesPanel } from "@/components/analysis/ReferencesPanel"
 import { RiskArcGauge } from "@/components/charts/RiskArcGauge"
 import { SymptomRadarChart } from "@/components/charts/SymptomRadarChart"
 import { Card } from "@/components/ui/Card"
@@ -310,6 +313,10 @@ function AnalysisContent() {
                             ))}
                           </div>
                         )}
+                        <CitationChips
+                          codes={item.citations}
+                          references={displayResult.references}
+                        />
                       </div>
                     ))}
                   </div>
@@ -325,7 +332,7 @@ function AnalysisContent() {
                 <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
                   指標解讀與改善
                 </h2>
-                <MetricExplanationPanel items={displayResult.metric_explanations ?? []} />
+                <MetricExplanationPanel items={displayResult.metric_explanations ?? []} references={displayResult.references} />
               </div>
             </FadeIn>
 
@@ -337,6 +344,14 @@ function AnalysisContent() {
                     心率變異性（HRV）
                   </h2>
                   <HRVMetricsPanel hrv={health.hrv} analysis={displayResult.hrv_analysis} />
+                  {health.hrv.sdnn_series && health.hrv.sdnn_series.length > 1 && (
+                    <Card className="mt-4">
+                      <HRVTrendChart
+                        series={health.hrv.sdnn_series}
+                        reference={displayResult.hrv_analysis?.reference_range}
+                      />
+                    </Card>
+                  )}
                 </div>
               </FadeIn>
             )}
@@ -378,9 +393,15 @@ function AnalysisContent() {
                 <p className="text-sm text-gray-500 mb-3">
                   不以九種體質分類呈現，而是直接從中醫觀點整理你目前較需要留意的身體狀態與調整方向。
                 </p>
-                <RecommendationList recommendations={displayResult.recommendations} />
+                <RecommendationList recommendations={displayResult.recommendations} references={displayResult.references} />
               </div>
             </FadeIn>
+
+            {displayResult.references && Object.keys(displayResult.references).length > 0 && (
+              <FadeIn>
+                <ReferencesPanel references={displayResult.references} />
+              </FadeIn>
+            )}
 
             {/* AI Chat Panel */}
             <FadeIn>

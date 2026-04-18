@@ -28,6 +28,7 @@ export interface HealthRecommendation {
   content_zh: string
   priority: "high" | "medium" | "low"
   evidence_basis: "tcm" | "western" | "integrative"
+  citations?: string[]
 }
 
 export interface WesternFlags {
@@ -112,11 +113,28 @@ export interface HRVRiskAssessment {
   evidence: string[]
 }
 
+export interface HRVReferenceRange {
+  age_bracket: string
+  sdnn_p25: number
+  sdnn_p50: number
+  sdnn_p75: number
+  rmssd_p25: number
+  rmssd_p50: number
+  rmssd_p75: number
+  lf_hf_normal_low: number
+  lf_hf_normal_high: number
+  sdnn_percentile?: number | null
+  rmssd_percentile?: number | null
+  sources: string[]
+  confidence: "low" | "medium" | "high"
+}
+
 export interface HRVAnalysis {
   time_domain: HRVTimeDomain
   frequency_domain: HRVFrequencyDomain
   autonomic_balance: HRVAutonomicBalance
   hrv_risk_assessment: HRVRiskAssessment
+  reference_range?: HRVReferenceRange | null
 }
 
 export interface IntegratedCardiacAssessment {
@@ -133,6 +151,7 @@ export interface DataDrivenRecommendation {
   why_zh: string
   target_metric: string
   actions: string[]
+  citations?: string[]
 }
 
 export interface MetricExplanation {
@@ -144,6 +163,7 @@ export interface MetricExplanation {
   improvement_goal_zh: string
   actionable_steps: string[]
   priority: "high" | "medium" | "low"
+  citations?: string[]
 }
 
 export interface AnalysisResult {
@@ -163,6 +183,7 @@ export interface AnalysisResult {
   claude_summary_zh: string
   claude_summary_en: string
   western_flags: WesternFlags
+  references?: Record<string, string>
   raw_claude_response: string
   status: "pending" | "analyzing" | "completed" | "error"
   error_message?: string

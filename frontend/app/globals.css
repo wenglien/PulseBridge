@@ -41,6 +41,18 @@
   --text-1:    #111827;
   --text-2:    #4B5563;
   --text-3:    #9CA3AF;
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --bg:        #0F172A;
+  --surface:   #1E293B;
+  --border:    #334155;
+  --border-mid: #475569;
+  --text-1:    #F1F5F9;
+  --text-2:    #CBD5E1;
+  --text-3:    #94A3B8;
+  color-scheme: dark;
 }
 
 /* ── Safe area (notch / home indicator) ── */
