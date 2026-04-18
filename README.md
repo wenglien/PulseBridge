@@ -116,6 +116,29 @@ Open `http://localhost:3000`.
 
 ---
 
+## Environment Variables
+
+### Backend (`backend/.env`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `GROQ_API_KEY` | Yes | Groq API key |
+| `JWT_SECRET` | Yes | Random secret for signing JWTs — generate with `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `GROQ_MODEL` | No | Model name (default: `llama-3.3-70b-versatile`) |
+| `DATA_DIR` | No | Path for session data (default: `./data`) |
+| `CORS_ORIGINS` | No | Comma-separated allowed origins (default: `http://localhost:3000`) |
+| `CORS_ORIGIN_REGEX` | No | Regex for dynamic origins, e.g. Firebase preview channels |
+| `DATABASE_URL` | No | Full DB URL; leave blank for SQLite |
+
+### Frontend (`frontend/.env.local`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | No | Backend URL without trailing slash |
+| `NEXT_PUBLIC_FIREBASE_*` | No | Only needed if using Firebase Auth / Analytics |
+
+---
+
 ## Project Structure
 
 ```
