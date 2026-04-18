@@ -174,6 +174,7 @@ export default function UploadPage() {
   const {
     state, health, sessionId, error,
     fileName, fileSizeMb, uploadSizeMb, uploadPercent, uploadLoaded, uploadTotal,
+    extractPercent,
     scan, recordCounts,
     uploadXml, extract, reset,
   } = useHealthData()
@@ -345,10 +346,18 @@ export default function UploadPage() {
 
         {/* ── STEP 4: extracting ── */}
         {state === "extracting" && (
-          <StatusCard
-            label="正在提取選定的資料…"
-            sub={`時間範圍：${startDate} 至 ${endDate}，資料類型：${selected.length} 項`}
-          />
+          <Card>
+            <p className="text-sm font-medium text-gray-900">正在提取選定的資料…</p>
+            <p className="text-xs text-gray-500 mt-1">
+              時間範圍：{startDate} 至 {endDate}，資料類型：{selected.length} 項
+            </p>
+            <div className="mt-3">
+              <ProgressBar
+                value={extractPercent}
+                label={`${extractPercent}%`}
+              />
+            </div>
+          </Card>
         )}
 
         {/* ── STEP 5: error ── */}

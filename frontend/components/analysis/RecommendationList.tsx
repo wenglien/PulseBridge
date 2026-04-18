@@ -3,12 +3,14 @@ import { useState } from "react"
 import type { HealthRecommendation } from "@/types/analysis"
 import { cn, categoryLabel } from "@/lib/utils"
 import { RECOMMENDATION_CATEGORIES } from "@/lib/constants"
+import { CitationChips } from "@/components/analysis/CitationChips"
 
 interface RecommendationListProps {
   recommendations: HealthRecommendation[]
+  references?: Record<string, string>
 }
 
-export function RecommendationList({ recommendations }: RecommendationListProps) {
+export function RecommendationList({ recommendations, references }: RecommendationListProps) {
   const [activeTab, setActiveTab] = useState("diet")
 
   const byCat = RECOMMENDATION_CATEGORIES.reduce((acc, cat) => {
@@ -81,6 +83,7 @@ export function RecommendationList({ recommendations }: RecommendationListProps)
                 </span>
               </div>
               <p className="text-sm text-gray-500 leading-relaxed">{rec.content_zh}</p>
+              <CitationChips codes={rec.citations} references={references} />
             </div>
           </div>
         ))}

@@ -6,6 +6,11 @@ export interface ECGReading {
   lead_type: string
 }
 
+export interface SDNNRecord {
+  timestamp: string
+  value_ms: number
+}
+
 export interface HRVMetrics {
   sdnn: number
   rmssd: number
@@ -16,6 +21,7 @@ export interface HRVMetrics {
   mean_rr: number
   rr_intervals: number[]
   timestamps: string[]
+  sdnn_series?: SDNNRecord[]
 }
 
 export interface SleepStage {
@@ -39,6 +45,7 @@ export interface SleepData {
 export interface HealthData {
   session_id: string
   uploaded_at: string
+  age?: number | null
   ecg_readings: ECGReading[]
   hrv: HRVMetrics | null
   sleep: SleepData[]

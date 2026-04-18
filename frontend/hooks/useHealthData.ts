@@ -33,6 +33,7 @@ export function useHealthData() {
   const [uploadTotal, setUploadTotal] = useState(0)
   const [scan,       setScan]       = useState<ScanResult | null>(null)
   const [recordCounts, setRecordCounts] = useState<Record<string, number>>({})
+  const [extractPercent, setExtractPercent] = useState(0)
 
   // ── Phase 1: upload XML ──────────────────────────────────────────────
   const uploadXml = useCallback(async (file: File) => {
@@ -98,15 +99,27 @@ export function useHealthData() {
   ) => {
     if (!sessionId) return
     setState("extracting")
+    setExtractPercent(0)
     setError(null)
+
+    const poll = setInterval(async () => {
+      try {
+        const { pct } = await api.extractProgress(sessionId)
+        setExtractPercent(Math.min(99, Math.round(pct * 100)))
+      } catch { /* ignore transient polling errors */ }
+    }, 500)
+
     try {
       const result = await api.extractXml(sessionId, startDate, endDate, dataTypes)
       setHealth(result.parsed)
       setRecordCounts(result.record_counts)
+      setExtractPercent(100)
       setState("done")
     } catch (e) {
       setError(e instanceof Error ? e.message : "提取失敗")
       setState("error")
+    } finally {
+      clearInterval(poll)
     }
   }, [sessionId])
 
@@ -142,12 +155,14 @@ export function useHealthData() {
     setScan(null)
     setFileNames([])
     setRecordCounts({})
+    setExtractPercent(0)
   }, [])
 
   return {
     state, health, sessionId, error,
     fileName, fileSizeMb, uploadSizeMb,
     uploadPercent, uploadLoaded, uploadTotal,
+    extractPercent,
     scan, recordCounts,
     fileNames,
     uploadXml, extract, uploadFiles, reset,

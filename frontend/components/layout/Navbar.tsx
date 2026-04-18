@@ -2,6 +2,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { ThemeToggle } from "@/components/ui/ThemeToggle"
 
 const NAV_LINKS = [
   { href: "/",              label: "首頁",    exact: true  },
@@ -14,12 +15,12 @@ export function Navbar() {
   const pathname = usePathname()
 
   return (
-    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <nav className="sticky top-0 z-50 bg-[var(--surface)] border-b border-[var(--border)] shadow-sm">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 md:h-16 flex items-center justify-between gap-4">
 
         {/* Logo */}
         <Link href="/" className="flex items-center flex-shrink-0">
-          <span className="font-bold text-gray-900 text-base tracking-tight">
+          <span className="font-bold text-[var(--text-1)] text-base tracking-tight">
             Pulse<span className="text-[#0D7A66]">Bridge</span>
           </span>
         </Link>
@@ -47,6 +48,7 @@ export function Navbar() {
 
         {/* Desktop CTA */}
         <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+          <ThemeToggle />
           <Link
             href="/upload"
             className="inline-flex items-center px-4 py-2 rounded-xl bg-[#0D7A66] text-white text-sm font-semibold hover:bg-[#1A9479] transition-colors shadow-sm"
@@ -56,7 +58,8 @@ export function Navbar() {
         </div>
 
         {/* Mobile: compact CTA only (bottom nav handles navigation) */}
-        <div className="md:hidden">
+        <div className="md:hidden flex items-center gap-2">
+          <ThemeToggle className="w-9 h-9" />
           <Link
             href="/upload"
             className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#0D7A66] text-white text-sm font-semibold hover:bg-[#1A9479] transition-colors"
