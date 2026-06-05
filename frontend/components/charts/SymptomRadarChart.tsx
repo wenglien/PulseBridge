@@ -26,12 +26,6 @@ function toPercent(score: number, max: number): number {
   return Math.round((score / max) * 100)
 }
 
-const SEVERITY_GRADIENT = [
-  { offset: "0%", color: "#0D7A66" },
-  { offset: "60%", color: "#F59E0B" },
-  { offset: "100%", color: "#DC2626" },
-]
-
 export function SymptomRadarChart({ data, compact = false }: Props) {
   const chartData = [
     {
@@ -123,8 +117,8 @@ export function SymptomRadarChart({ data, compact = false }: Props) {
       <div className="space-y-2 mt-1 px-1">
         {chartData.map((d) => (
           <div key={d.subject} className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 w-8 text-right shrink-0">{d.subject}</span>
-            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <span className="text-xs text-[var(--text-2)] w-8 text-right shrink-0">{d.subject}</span>
+            <div className="flex-1 h-1.5 bg-[var(--surface-muted)] rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{
@@ -137,13 +131,13 @@ export function SymptomRadarChart({ data, compact = false }: Props) {
                 }}
               />
             </div>
-            <span className="text-xs font-mono text-gray-400 w-8 shrink-0">{d.value}%</span>
+            <span className="text-xs font-mono text-[var(--text-3)] w-8 shrink-0">{d.value}%</span>
           </div>
         ))}
       </div>
 
       {!hasAnySymptom && (
-        <p className="text-xs text-gray-400 text-center mt-2">尚未填寫任何症狀</p>
+        <p className="text-xs text-[var(--text-3)] text-center mt-2">尚未填寫任何症狀</p>
       )}
     </div>
   )

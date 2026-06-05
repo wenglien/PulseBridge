@@ -18,8 +18,8 @@ export function SymptomTag({ label, value, onChange }: SymptomTagProps) {
       className={cn(
         "flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all duration-200 select-none w-full text-left",
         value === 0
-          ? "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700"
-          : "border-gray-300 bg-gray-50 text-gray-800",
+          ? "border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:border-[var(--border-mid)] hover:text-[var(--text-2)]"
+          : "border-[var(--border-mid)] bg-[var(--surface-muted)] text-[var(--text-1)]",
       )}
     >
       <span

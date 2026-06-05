@@ -58,27 +58,27 @@ export function StreamingAnalysis({ sessionId, onComplete, onError }: StreamingA
   }, [sessionId])
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 shadow-sm space-y-4">
       <div className="flex items-center gap-3">
         {phase !== "done" && <Spinner size="sm" />}
         {phase === "done" && <div className="w-2 h-2 rounded-full bg-green-500" />}
         <div>
-          <p className="text-sm font-medium text-gray-900">
+          <p className="text-sm font-medium text-[var(--text-1)]">
             {phase === "connecting" ? "連接 AI 分析引擎..." :
              phase === "streaming" ? "正在生成中西醫整合分析..." :
              "分析完成！"}
           </p>
-          <p className="text-xs text-gray-400">Claude AI · 中西醫整合模型</p>
+          <p className="text-xs text-[var(--text-3)]">AI 中西醫整合模型</p>
         </div>
       </div>
 
       {text && (
         <div
           ref={textRef}
-          className="max-h-64 overflow-y-auto rounded-xl bg-gray-50 border border-gray-200 p-4"
+          className="max-h-64 overflow-y-auto rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] p-4"
         >
           <pre
-            className={`text-sm text-gray-600 font-mono whitespace-pre-wrap leading-relaxed ${phase === "streaming" ? "cursor-blink" : ""}`}
+            className={`text-sm text-[var(--text-2)] font-mono whitespace-pre-wrap leading-relaxed ${phase === "streaming" ? "cursor-blink" : ""}`}
           >
             {text}
           </pre>
@@ -88,7 +88,7 @@ export function StreamingAnalysis({ sessionId, onComplete, onError }: StreamingA
       {phase === "connecting" && (
         <div className="space-y-2 animate-pulse">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className={`h-3 rounded-full bg-gray-200 ${i % 2 === 0 ? "w-full" : "w-3/4"}`} />
+            <div key={i} className={`h-3 rounded-full bg-[var(--border)] ${i % 2 === 0 ? "w-full" : "w-3/4"}`} />
           ))}
         </div>
       )}

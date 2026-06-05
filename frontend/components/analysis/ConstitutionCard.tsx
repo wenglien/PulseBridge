@@ -21,13 +21,13 @@ export function ConstitutionCard({ primary, secondary, scores }: ConstitutionCar
   const primaryActions = constitutionQuickActions(primary)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-6">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 shadow-sm space-y-6">
       {/* Primary */}
       <div>
-        <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">主要體質</p>
+        <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-3">主要體質</p>
         <div className="flex items-start gap-4">
           <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
+            className="w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
             style={{ backgroundColor: constitutionColor(primary) + "18", border: `1px solid ${constitutionColor(primary)}30` }}
           >
             <div className="w-4 h-4 rounded-full" style={{ backgroundColor: constitutionColor(primary) }} />
@@ -44,16 +44,16 @@ export function ConstitutionCard({ primary, secondary, scores }: ConstitutionCar
                 <Badge variant="jade">{primaryScore.score.toFixed(0)} 分</Badge>
               )}
             </div>
-            <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+            <p className="text-[var(--text-2)] text-sm mt-2 leading-relaxed">
               {constitutionDescription(primary)}
             </p>
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-[var(--text-3)] mt-2">
               體質是傾向，不是診斷；可透過作息與生活習慣逐步改善。
             </p>
             {primaryScore?.key_indicators?.length ? (
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {primaryScore.key_indicators.map((ind) => (
-                  <span key={ind} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                  <span key={ind} className="text-xs px-2 py-0.5 rounded-full bg-[var(--surface-muted)] text-[var(--text-2)]">
                     {ind}
                   </span>
                 ))}
@@ -63,22 +63,22 @@ export function ConstitutionCard({ primary, secondary, scores }: ConstitutionCar
         </div>
       </div>
 
-      <div className="pt-4 border-t border-gray-200 space-y-4">
+      <div className="pt-4 border-t border-[var(--border)] space-y-4">
         <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">你可能常有的感受</p>
+          <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-2">你可能常有的感受</p>
           <div className="flex flex-wrap gap-2">
             {primaryFeelings.map((item) => (
-              <span key={item} className="text-xs px-2 py-1 rounded-lg bg-gray-50 border border-gray-200 text-gray-700">
+              <span key={item} className="text-xs px-2 py-1 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--text-2)]">
                 {item}
               </span>
             ))}
           </div>
         </div>
         <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">你可以先做這三件事</p>
+          <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-2">你可以先做這三件事</p>
           <div className="space-y-1.5">
             {primaryActions.map((item, idx) => (
-              <p key={item} className="text-sm text-gray-700 leading-relaxed">
+              <p key={item} className="text-sm text-[var(--text-2)] leading-relaxed">
                 <span className="font-semibold text-[#0D7A66] mr-1">{idx + 1}.</span>
                 {item}
               </p>
@@ -89,8 +89,8 @@ export function ConstitutionCard({ primary, secondary, scores }: ConstitutionCar
 
       {/* Secondary */}
       {secondary && secondaryScore && (
-        <div className="pt-4 border-t border-gray-200">
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">次要體質</p>
+        <div className="pt-4 border-t border-[var(--border)]">
+          <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-3">次要體質</p>
           <div className="flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -105,7 +105,7 @@ export function ConstitutionCard({ primary, secondary, scores }: ConstitutionCar
                 </span>
                 <Badge variant="muted">{secondaryScore.score.toFixed(0)} 分</Badge>
               </div>
-              <p className="text-gray-500 text-xs mt-1 leading-relaxed line-clamp-2">
+              <p className="text-[var(--text-2)] text-xs mt-1 leading-relaxed line-clamp-2">
                 {constitutionDescription(secondary)}
               </p>
             </div>
@@ -114,8 +114,8 @@ export function ConstitutionCard({ primary, secondary, scores }: ConstitutionCar
       )}
 
       {/* All scores mini bars */}
-      <div className="pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">九種體質分數</p>
+      <div className="pt-4 border-t border-[var(--border)]">
+        <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-3">九種體質分數</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {scores.map((s) => (
             <ProgressBar

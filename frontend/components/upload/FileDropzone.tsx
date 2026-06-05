@@ -51,10 +51,10 @@ export function FileDropzone({ onFiles, disabled }: FileDropzoneProps) {
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         className={cn(
-          "relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-300 cursor-pointer",
+          "relative border-2 border-dashed rounded-xl p-10 text-center transition-all duration-300 cursor-pointer",
           dragging
             ? "border-[#3D8B7A] bg-[#3D8B7A]/10 scale-[1.01]"
-            : "border-white/20 hover:border-white/40 hover:bg-white/5",
+            : "border-[var(--border-mid)] hover:border-[#3D8B7A]/50 hover:bg-[var(--surface-muted)]",
           disabled && "opacity-50 cursor-not-allowed",
         )}
       >
@@ -68,10 +68,10 @@ export function FileDropzone({ onFiles, disabled }: FileDropzoneProps) {
         />
 
         <div className="space-y-3">
-          <p className="text-white text-lg font-medium">拖放 CSV 健康資料</p>
-          <p className="text-white/50 text-sm">或點擊選擇檔案（可一次選多個）</p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-            <span className="text-white/40 text-xs">支援格式：</span>
+          <p className="text-[var(--text-1)] text-lg font-medium">拖放 CSV 健康資料</p>
+          <p className="text-[var(--text-3)] text-sm">或點擊選擇檔案（可一次選多個）</p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)]">
+            <span className="text-[var(--text-3)] text-xs">支援格式：</span>
             <span className="text-[#C9A96E] text-xs font-mono">.csv</span>
           </div>
         </div>
@@ -81,9 +81,9 @@ export function FileDropzone({ onFiles, disabled }: FileDropzoneProps) {
             { label: "ECG.csv", desc: "心電圖分類" },
             { label: "HeartRate.csv", desc: "心律資料" },
           ].map((item) => (
-            <div key={item.label} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+            <div key={item.label} className="px-3 py-2 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)]">
               <div className="text-xs text-[#C9A96E] font-mono">{item.label}</div>
-              <div className="text-xs text-white/40 mt-0.5">{item.desc}</div>
+              <div className="text-xs text-[var(--text-3)] mt-0.5">{item.desc}</div>
             </div>
           ))}
         </div>
@@ -92,17 +92,17 @@ export function FileDropzone({ onFiles, disabled }: FileDropzoneProps) {
       {staged.length > 0 && (
         <div className="space-y-2">
           {staged.map((f) => (
-            <div key={f.name} className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-white/5 border border-white/10">
+            <div key={f.name} className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-[var(--surface-muted)] border border-[var(--border)]">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-2 h-2 rounded-full bg-[#3D8B7A] flex-shrink-0" />
-                <span className="text-sm text-white/80 truncate font-mono">{f.name}</span>
-                <span className="text-xs text-white/30 flex-shrink-0">
+                <span className="text-sm text-[var(--text-2)] truncate font-mono">{f.name}</span>
+                <span className="text-xs text-[var(--text-3)] flex-shrink-0">
                   {(f.size / 1024).toFixed(0)} KB
                 </span>
               </div>
               <button
                 onClick={() => removeFile(f.name)}
-                className="text-white/30 hover:text-red-400 text-xs ml-3 flex-shrink-0"
+                className="text-[var(--text-3)] hover:text-red-500 text-xs ml-3 flex-shrink-0"
               >
                 移除
               </button>

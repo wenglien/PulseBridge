@@ -16,6 +16,7 @@ interface ParseProgressProps {
 
 export function ParseProgress({ fileNames, done }: ParseProgressProps) {
   const [step, setStep] = useState(0)
+  const visibleStep = done ? STEPS.length : step
 
   useEffect(() => {
     if (done) return
@@ -25,31 +26,27 @@ export function ParseProgress({ fileNames, done }: ParseProgressProps) {
     return () => clearInterval(id)
   }, [done])
 
-  useEffect(() => {
-    if (done) setStep(STEPS.length)
-  }, [done])
-
   return (
     <div className="space-y-5">
-      <div className="px-4 py-3 rounded-xl bg-[#3D8B7A]/10 border border-[#3D8B7A]/30 space-y-1">
+      <div className="px-4 py-3 rounded-lg bg-[#3D8B7A]/10 border border-[#3D8B7A]/30 space-y-1">
         {fileNames.map((name) => (
           <div key={name} className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-[#3D8B7A] flex-shrink-0" />
-            <p className="text-sm text-white font-mono truncate">{name}</p>
+            <p className="text-sm text-[var(--text-1)] font-mono truncate">{name}</p>
           </div>
         ))}
-        <p className="text-xs text-white/50 pt-0.5">正在處理...</p>
+        <p className="text-xs text-[var(--text-3)] pt-0.5">正在處理...</p>
       </div>
 
       <div className="space-y-2">
         {STEPS.map((label, i) => {
-          const isDone = i < step
-          const isActive = i === step && !done
+          const isDone = i < visibleStep
+          const isActive = i === visibleStep && !done
           return (
             <div
               key={label}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${
-                isDone ? "bg-[#3D8B7A]/10" : isActive ? "bg-white/5" : "opacity-30"
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${
+                isDone ? "bg-[#3D8B7A]/10" : isActive ? "bg-[var(--surface-muted)]" : "opacity-30"
               }`}
             >
               <div className="w-5 h-5 flex-shrink-0">
@@ -58,10 +55,10 @@ export function ParseProgress({ fileNames, done }: ParseProgressProps) {
                 ) : isActive ? (
                   <Spinner size="sm" />
                 ) : (
-                  <span className="w-4 h-4 rounded-full border border-white/20 block" />
+                  <span className="w-4 h-4 rounded-full border border-[var(--border)] block" />
                 )}
               </div>
-              <span className={`text-sm ${isDone ? "text-white/80" : isActive ? "text-white" : "text-white/30"}`}>
+              <span className={`text-sm ${isDone ? "text-[var(--text-2)]" : isActive ? "text-[var(--text-1)]" : "text-[var(--text-3)]"}`}>
                 {label}
               </span>
             </div>

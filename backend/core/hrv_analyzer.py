@@ -78,8 +78,8 @@ def _compute_frequency_domain(rr: np.ndarray) -> tuple[float, float, float]:
     lf_mask = (freqs >= 0.04) & (freqs < 0.15)
     hf_mask = (freqs >= 0.15) & (freqs < 0.40)
 
-    lf_power = float(np.trapz(psd[lf_mask], freqs[lf_mask])) if lf_mask.any() else 0.0
-    hf_power = float(np.trapz(psd[hf_mask], freqs[hf_mask])) if hf_mask.any() else 0.0
+    lf_power = float(np.trapezoid(psd[lf_mask], freqs[lf_mask])) if lf_mask.any() else 0.0
+    hf_power = float(np.trapezoid(psd[hf_mask], freqs[hf_mask])) if hf_mask.any() else 0.0
     lf_hf_ratio = round(lf_power / hf_power, 3) if hf_power > 1e-9 else 0.0
 
     return lf_power, hf_power, lf_hf_ratio

@@ -231,14 +231,86 @@ async def add_ecg_csv(
     if not ecg_records:
         raise HTTPException(400, "無法從此 CSV 讀取 ECG 資料，請確認欄位包含 Date 和 Classification")
 
-    ecg_list = [ECGReading(**r) for r in ecg_records[:200]]
+    added, total = _merge_ecg_records(session_id, ecg_records)
 
-    # Merge into existing health data
+    return {"session_id": session_id, "ecg_count": total, "added_count": added}
+
+
+@router.post("/add-ecg-csv-batch")
+async def add_ecg_csv_batch(
+    session_id: str = File(...),
+    files: List[UploadFile] = File(...),
+):
+    """
+    Parse one or more ECG CSV files and merge all readings into an existing session.
+    Existing ECG readings are preserved and duplicate timestamp/classification rows are ignored.
+    """
+    session = load_session(session_id)
+    if not session or "health" not in session:
+        raise HTTPException(404, "Session not found — please upload health data first")
+
+    if not files:
+        raise HTTPException(400, "請至少選擇一個 ECG CSV 檔案")
+
+    all_records: list[dict] = []
+    parsed_files = 0
+    failed_files: list[str] = []
+
+    for upload_file in files:
+        raw = await upload_file.read()
+        if not raw:
+            failed_files.append(upload_file.filename or "empty.csv")
+            continue
+        if len(raw) > 20 * 1024 * 1024:
+            raise HTTPException(400, f"{upload_file.filename} 超過 20 MB 限制")
+
+        records = parse_ecg_csv(raw)
+        if records:
+            parsed_files += 1
+            all_records.extend(records)
+        else:
+            failed_files.append(upload_file.filename or "unknown.csv")
+
+    if not all_records:
+        raise HTTPException(400, "無法從選取的 CSV 讀取 ECG 資料，請確認欄位包含 Date 和 Classification")
+
+    added, total = _merge_ecg_records(session_id, all_records)
+
+    return {
+        "session_id": session_id,
+        "ecg_count": total,
+        "added_count": added,
+        "file_count": len(files),
+        "parsed_file_count": parsed_files,
+        "failed_files": failed_files,
+    }
+
+
+def _merge_ecg_records(session_id: str, ecg_records: list[dict]) -> tuple[int, int]:
+    session = load_session(session_id)
+    if not session or "health" not in session:
+        raise HTTPException(404, "Session not found — please upload health data first")
+
     health = session["health"]
-    health["ecg_readings"] = [r.model_dump() for r in ecg_list]
+    existing = health.get("ecg_readings") or []
+    by_key: dict[tuple[str, str], dict] = {}
+
+    for item in existing:
+        timestamp = str(item.get("timestamp", ""))
+        classification = str(item.get("classification", "notDetermined"))
+        by_key[(timestamp, classification)] = item
+
+    before = len(by_key)
+    for record in ecg_records:
+        reading = ECGReading(**record).model_dump()
+        key = (str(reading.get("timestamp", "")), str(reading.get("classification", "notDetermined")))
+        by_key[key] = reading
+
+    merged = sorted(by_key.values(), key=lambda item: str(item.get("timestamp", "")))[:500]
+    health["ecg_readings"] = merged
     save_session(session_id, {"health": health})
 
-    return {"session_id": session_id, "ecg_count": len(ecg_list)}
+    return max(0, len(by_key) - before), len(merged)
 
 
 # ---------------------------------------------------------------------------

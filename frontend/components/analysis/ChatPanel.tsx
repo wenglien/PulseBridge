@@ -122,9 +122,9 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
   }
 
   return (
-    <div className="flex flex-col bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className="flex flex-col bg-[var(--surface)] border border-[var(--border)] rounded-lg overflow-hidden shadow-sm">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border)]">
         <div className="w-8 h-8 rounded-full bg-[#E8F5F2] flex items-center justify-center flex-shrink-0">
           <svg className="w-4 h-4 text-[#0D7A66]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round"
@@ -132,12 +132,12 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
           </svg>
         </div>
         <div>
-          <p className="text-sm font-semibold text-gray-900">AI 追問助理</p>
-          <p className="text-xs text-gray-400">根據您的報告回答問題</p>
+          <p className="text-sm font-semibold text-[var(--text-1)]">AI 追問助理</p>
+          <p className="text-xs text-[var(--text-3)]">根據您的報告回答問題</p>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs text-gray-400">已讀取報告</span>
+          <span className="text-xs text-[var(--text-3)]">已讀取報告</span>
         </div>
       </div>
 
@@ -155,26 +155,26 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
             )}
             <div
               className={cn(
-                "max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed",
+                "max-w-[80%] px-4 py-3 rounded-lg text-sm leading-relaxed",
                 msg.role === "user"
                   ? "bg-[#0D7A66] text-white rounded-tr-sm"
-                  : "bg-gray-50 text-gray-800 border border-gray-200 rounded-tl-sm",
+                  : "bg-[var(--surface-muted)] text-[var(--text-1)] border border-[var(--border)] rounded-tl-sm",
               )}
             >
               {msg.content || (msg.streaming && (
                 <span className="flex gap-1 items-center h-4">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce" style={{ animationDelay: "300ms" }} />
                 </span>
               ))}
               {msg.streaming && msg.content && (
-                <span className="inline-block w-0.5 h-4 bg-gray-400 animate-pulse ml-0.5 align-middle" />
+                <span className="inline-block w-0.5 h-4 bg-[var(--text-3)] animate-pulse ml-0.5 align-middle" />
               )}
             </div>
             {msg.role === "user" && (
-              <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-gray-600 text-xs font-bold">我</span>
+              <div className="w-7 h-7 rounded-full bg-[var(--border)] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-[var(--text-2)] text-xs font-bold">我</span>
               </div>
             )}
           </div>
@@ -203,7 +203,7 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
       )}
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-gray-100 flex gap-3 items-end">
+      <div className="px-4 py-3 border-t border-[var(--border)] flex gap-3 items-end">
         <textarea
           ref={textareaRef}
           rows={1}
@@ -216,7 +216,7 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
           onKeyDown={handleKey}
           disabled={loading}
           placeholder="輸入問題，按 Enter 送出（Shift+Enter 換行）"
-          className="flex-1 resize-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#0D7A66] focus:ring-1 focus:ring-[#0D7A66]/20 disabled:opacity-50 transition-all overflow-hidden"
+          className="flex-1 resize-none bg-[var(--surface-muted)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-1)] placeholder-gray-400 focus:outline-none focus:border-[#0D7A66] focus:ring-1 focus:ring-[#0D7A66]/20 disabled:opacity-50 transition-all overflow-hidden"
           style={{ minHeight: "42px" }}
         />
         <button
