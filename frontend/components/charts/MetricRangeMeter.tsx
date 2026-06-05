@@ -87,14 +87,14 @@ export function MetricRangeMeter({ metricKey, currentValue }: Props) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-gray-400">參考區間</span>
+        <span className="text-xs text-[var(--text-3)]">參考區間</span>
         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${STATUS_STYLES[status]}`}>
           {STATUS_LABEL[status]}
         </span>
       </div>
 
       {/* Zone bar */}
-      <div className="relative h-2.5 rounded-full overflow-hidden bg-gray-100">
+      <div className="relative h-2.5 rounded-full overflow-hidden bg-[var(--surface-muted)]">
         {/* danger left */}
         <div className="absolute top-0 left-0 h-full bg-red-100" style={{ width: `${warnLoPct}%` }} />
         {/* warning left */}
@@ -113,7 +113,7 @@ export function MetricRangeMeter({ metricKey, currentValue }: Props) {
         />
       </div>
 
-      <div className="flex justify-between text-[10px] text-gray-400">
+      <div className="flex justify-between text-[10px] text-[var(--text-3)]">
         <span>最低 {cfg.min}{cfg.unit ?? ""}</span>
         <span className="text-[#0D7A66] font-medium">目標 {cfg.goodMin}–{cfg.goodMax}{cfg.unit ?? ""}</span>
         <span>最高 {cfg.max}{cfg.unit ?? ""}</span>

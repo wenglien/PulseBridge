@@ -24,13 +24,13 @@ export function ProgressBar({
     <div className={cn("w-full", className)}>
       {(label || (showValue && !indeterminate)) && (
         <div className="flex justify-between items-center mb-1.5">
-          {label && <span className="text-xs text-gray-600">{label}</span>}
+          {label && <span className="text-xs text-[var(--text-2)]">{label}</span>}
           {showValue && !indeterminate && (
-            <span className="text-xs text-gray-700 font-medium">{pct.toFixed(0)}%</span>
+            <span className="text-xs text-[var(--text-2)] font-medium">{pct.toFixed(0)}%</span>
           )}
         </div>
       )}
-      <div className="h-2.5 rounded-full bg-gray-200 overflow-hidden relative">
+      <div className="h-2.5 rounded-full bg-[var(--border)] overflow-hidden relative">
         {indeterminate ? (
           <div className="pb-indeterminate-bar" />
         ) : (

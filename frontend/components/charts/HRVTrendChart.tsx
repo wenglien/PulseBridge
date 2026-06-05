@@ -1,7 +1,7 @@
 "use client"
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceArea, ReferenceLine, Legend,
+  ResponsiveContainer, ReferenceArea, ReferenceLine,
 } from "recharts"
 import type { SDNNRecord } from "@/types/health"
 import type { HRVReferenceRange } from "@/types/analysis"
@@ -45,8 +45,8 @@ export function HRVTrendChart({ series, reference }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wider">SDNN 趨勢</p>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-[var(--text-3)] uppercase tracking-wider">SDNN 趨勢</p>
+          <p className="text-xs text-[var(--text-2)] mt-0.5">
             共 {series.length} 筆記錄，平均 {userAvg} ms
             {reference && (
               <span className="ml-1">
@@ -125,7 +125,7 @@ export function HRVTrendChart({ series, reference }: Props) {
       </ResponsiveContainer>
 
       {reference && (
-        <p className="text-[10px] text-gray-400">
+        <p className="text-[10px] text-[var(--text-3)]">
           參考資料：{reference.sources.join("、")}。
           綠色帶為同齡層 P25–P75 正常範圍。
         </p>

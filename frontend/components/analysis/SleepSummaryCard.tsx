@@ -22,9 +22,9 @@ const SLEEP_LABELS: Record<string, string> = {
 export function SleepSummaryCard({ sleep }: SleepSummaryCardProps) {
   if (!sleep.length) {
     return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-        <p className="text-xs text-gray-400 uppercase tracking-wider mb-4">睡眠分析</p>
-        <p className="text-gray-400 text-sm text-center py-8">無睡眠數據</p>
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 shadow-sm">
+        <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-4">睡眠分析</p>
+        <p className="text-[var(--text-3)] text-sm text-center py-8">無睡眠數據</p>
       </div>
     )
   }
@@ -46,8 +46,8 @@ export function SleepSummaryCard({ sleep }: SleepSummaryCardProps) {
   ].filter((d) => d.value > 0)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-      <p className="text-xs text-gray-400 uppercase tracking-wider mb-4">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 shadow-sm">
+      <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-4">
         睡眠分析（近 {sleep.length} 晚平均）
       </p>
 
@@ -87,8 +87,8 @@ export function SleepSummaryCard({ sleep }: SleepSummaryCardProps) {
         {/* Stats */}
         <div className="flex-1 space-y-3 w-full">
           <div className="text-center sm:text-left">
-            <p className="text-3xl font-bold text-gray-900">{minutesToHM(avg.total)}</p>
-            <p className="text-sm text-gray-400">平均睡眠時間</p>
+            <p className="text-3xl font-bold text-[var(--text-1)]">{minutesToHM(avg.total)}</p>
+            <p className="text-sm text-[var(--text-3)]">平均睡眠時間</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {pieData.map((d) => (
@@ -98,14 +98,14 @@ export function SleepSummaryCard({ sleep }: SleepSummaryCardProps) {
                   style={{ backgroundColor: SLEEP_COLORS[d.name] ?? "#9ca3af" }}
                 />
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-400">{SLEEP_LABELS[d.name]}</p>
-                  <p className="text-sm text-gray-800 font-medium">{minutesToHM(d.value)}</p>
+                  <p className="text-xs text-[var(--text-3)]">{SLEEP_LABELS[d.name]}</p>
+                  <p className="text-sm text-[var(--text-1)] font-medium">{minutesToHM(d.value)}</p>
                 </div>
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-            <span className="text-sm text-gray-500">睡眠效率</span>
+          <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">
+            <span className="text-sm text-[var(--text-2)]">睡眠效率</span>
             <span className={`text-sm font-bold ${avg.efficiency >= 0.85 ? "text-green-600" : avg.efficiency >= 0.75 ? "text-amber-600" : "text-red-600"}`}>
               {(avg.efficiency * 100).toFixed(0)}%
             </span>

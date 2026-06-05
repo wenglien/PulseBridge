@@ -22,9 +22,9 @@ export function ECGSummaryPanel({ ecgReadings, flags, analysis }: ECGSummaryPane
   const qualityPct  = Math.round((quality?.quality_score ?? 1) * 100)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-6">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 shadow-sm space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-xs text-gray-400 uppercase tracking-wider">ECG 深度分析</p>
+        <p className="text-xs text-[var(--text-3)] uppercase tracking-wider">ECG 深度分析</p>
         {risk && (
           <span className={`text-xs font-bold px-2.5 py-1 rounded-full border uppercase ${
             risk.risk_level === "low"    ? "bg-[#E8F5F2] text-[#0D7A66] border-[#9FD1C8]"
@@ -65,10 +65,10 @@ export function ECGSummaryPanel({ ecgReadings, flags, analysis }: ECGSummaryPane
       {/* Signal quality bar */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500">訊號品質</span>
-          <span className="text-xs font-semibold text-gray-700">{qualityPct}%</span>
+          <span className="text-xs text-[var(--text-2)]">訊號品質</span>
+          <span className="text-xs font-semibold text-[var(--text-2)]">{qualityPct}%</span>
         </div>
-        <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+        <div className="h-2 rounded-full bg-[var(--surface-muted)] overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-700"
             style={{
@@ -77,7 +77,7 @@ export function ECGSummaryPanel({ ecgReadings, flags, analysis }: ECGSummaryPane
             }}
           />
         </div>
-        <div className="flex justify-between text-[10px] text-gray-400">
+        <div className="flex justify-between text-[10px] text-[var(--text-3)]">
           <span>可用 {quality?.usable_readings ?? "—"} 筆</span>
           <span>不可用 {quality?.inconclusive_readings ?? "—"} 筆</span>
         </div>
@@ -92,7 +92,7 @@ export function ECGSummaryPanel({ ecgReadings, flags, analysis }: ECGSummaryPane
       {/* Flags */}
       {(flags.autonomic_imbalance || flags.sleep_apnea_risk || flags.bradycardia || flags.tachycardia) && (
         <div>
-          <p className="text-xs text-gray-400 mb-2">其他提示</p>
+          <p className="text-xs text-[var(--text-3)] mb-2">其他提示</p>
           <div className="flex flex-wrap gap-2">
             {flags.autonomic_imbalance && (
               <Flag label="自律神經失衡" color="yellow" />
@@ -113,10 +113,10 @@ export function ECGSummaryPanel({ ecgReadings, flags, analysis }: ECGSummaryPane
       {/* Evidence tags */}
       {risk?.evidence && risk.evidence.length > 0 && (
         <div>
-          <p className="text-xs text-gray-400 mb-2">ECG 證據摘要</p>
+          <p className="text-xs text-[var(--text-3)] mb-2">ECG 證據摘要</p>
           <div className="flex flex-wrap gap-2">
             {risk.evidence.map((item) => (
-              <span key={item} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-600 border border-gray-200">
+              <span key={item} className="text-xs px-2 py-1 rounded-lg bg-[var(--surface-muted)] text-[var(--text-2)] border border-[var(--border)]">
                 {item}
               </span>
             ))}
@@ -138,13 +138,13 @@ function StatTile({
     yellow: "text-yellow-700",
     orange: "text-orange-600",
     blue:   "text-blue-700",
-    gray:   "text-gray-900",
+    gray:   "text-[var(--text-1)]",
   }
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+    <div className="bg-[var(--surface-muted)] border border-[var(--border)] rounded-xl p-3 text-center">
       <p className={cn("text-xl font-bold", colorMap[color])}>{value}</p>
-      {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
-      <p className="text-xs text-gray-400 mt-1">{label}</p>
+      {sub && <p className="text-[10px] text-[var(--text-3)] mt-0.5">{sub}</p>}
+      <p className="text-xs text-[var(--text-3)] mt-1">{label}</p>
     </div>
   )
 }

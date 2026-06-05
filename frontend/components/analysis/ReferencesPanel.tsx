@@ -11,8 +11,8 @@ export function ReferencesPanel({ references }: Props) {
 
   return (
     <Card>
-      <p className="text-xs text-gray-400 uppercase tracking-wider">參考文獻</p>
-      <ol className="mt-2 space-y-1.5 text-xs text-gray-600 leading-relaxed list-none">
+      <p className="text-xs text-[var(--text-3)] uppercase tracking-wider">參考文獻</p>
+      <ol className="mt-2 space-y-1.5 text-xs text-[var(--text-2)] leading-relaxed list-none">
         {entries.map(([code, text]) => (
           <li key={code} className="flex gap-2">
             <span className="text-[#0D7A66] font-medium flex-shrink-0">[{code}]</span>

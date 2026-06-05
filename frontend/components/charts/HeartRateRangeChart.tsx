@@ -31,17 +31,17 @@ export function HeartRateRangeChart({ ecgReadings, analysis }: Props) {
 
   return (
     <div>
-      <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">心率分布</p>
+      <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-3">心率分布</p>
 
       {/* Visual range bar */}
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs text-gray-500">心率範圍</span>
-          <span className="text-xs font-mono text-gray-800 font-bold">
+          <span className="text-xs text-[var(--text-2)]">心率範圍</span>
+          <span className="text-xs font-mono text-[var(--text-1)] font-bold">
             {Math.round(minHR)} – {Math.round(maxHR)} bpm
           </span>
         </div>
-        <div className="relative h-4 rounded-full bg-gray-100 overflow-hidden">
+        <div className="relative h-4 rounded-full bg-[var(--surface-muted)] overflow-hidden">
           {/* Normal zone 60-100 */}
           {maxHR > 0 && (
             <div
@@ -65,12 +65,12 @@ export function HeartRateRangeChart({ ecgReadings, analysis }: Props) {
           {/* Avg marker */}
           {maxHR > minHR && (
             <div
-              className="absolute top-0 w-0.5 h-full bg-white shadow-md"
+              className="absolute top-0 w-0.5 h-full bg-[var(--surface)] shadow-md"
               style={{ left: `${((avgHR - minHR) / rangeSpan) * 100}%` }}
             />
           )}
         </div>
-        <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+        <div className="flex justify-between text-[10px] text-[var(--text-3)] mt-1">
           <span>最低 {Math.round(minHR)} bpm</span>
           <span className="text-[#0D7A66]">正常 60–100 bpm</span>
           <span>最高 {Math.round(maxHR)} bpm</span>

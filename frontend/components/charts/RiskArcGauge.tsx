@@ -156,7 +156,7 @@ export function RiskArcGauge({ riskLevel, score }: Props) {
         ].map((z) => (
           <div key={z.label} className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
-            <span className="text-xs text-gray-400">{z.label}</span>
+            <span className="text-xs text-[var(--text-3)]">{z.label}</span>
           </div>
         ))}
       </div>

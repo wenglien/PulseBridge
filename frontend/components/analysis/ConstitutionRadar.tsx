@@ -21,8 +21,8 @@ export function ConstitutionRadar({ scores, primaryType }: ConstitutionRadarProp
   const primaryColor = constitutionColor(primaryType as Parameters<typeof constitutionColor>[0])
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-      <p className="text-xs text-gray-400 uppercase tracking-wider mb-4">體質雷達圖</p>
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 shadow-sm">
+      <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-4">體質雷達圖</p>
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart data={data} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>

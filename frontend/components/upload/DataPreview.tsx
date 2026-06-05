@@ -19,7 +19,7 @@ export function DataPreview({ health }: DataPreviewProps) {
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-500 text-sm">解析完成！以下是從您的 Apple Watch 提取的健康數據：</p>
+      <p className="text-[var(--text-2)] text-sm">解析完成！以下是從您的 Apple Watch 提取的健康數據：</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -28,20 +28,20 @@ export function DataPreview({ health }: DataPreviewProps) {
           { label: "平均睡眠", value: avgSleep > 0 ? minutesToHM(avgSleep) : "N/A" },
           { label: "靜息心率", value: health.resting_heart_rate > 0 ? `${health.resting_heart_rate.toFixed(0)} bpm` : "N/A" },
         ].map((item) => (
-          <div key={item.label} className="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
-            <div className="text-lg font-bold text-gray-900">{item.value}</div>
-            <div className="text-xs text-gray-400 mt-0.5">{item.label}</div>
+          <div key={item.label} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center shadow-sm">
+            <div className="text-lg font-bold text-[var(--text-1)]">{item.value}</div>
+            <div className="text-xs text-[var(--text-3)] mt-0.5">{item.label}</div>
           </div>
         ))}
       </div>
 
       {Object.keys(ecgClassifications).length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <p className="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wider">ECG 分類結果</p>
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+          <p className="text-xs text-[var(--text-3)] mb-3 font-medium uppercase tracking-wider">ECG 分類結果</p>
           <div className="space-y-2">
             {Object.entries(ecgClassifications).map(([cls, count]) => (
               <div key={cls} className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-[var(--text-2)]">
                   {ECG_CLASSIFICATION_LABELS[cls] ?? cls}
                 </span>
                 <span className={`text-sm font-medium ${cls === "sinusRhythm" ? "text-green-600" : cls === "atrialFibrillation" ? "text-red-600" : "text-amber-600"}`}>
@@ -54,8 +54,8 @@ export function DataPreview({ health }: DataPreviewProps) {
       )}
 
       {hrv && hrv.sdnn > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <p className="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wider">HRV 指標</p>
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+          <p className="text-xs text-[var(--text-3)] mb-3 font-medium uppercase tracking-wider">HRV 指標</p>
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: "SDNN", value: `${hrv.sdnn.toFixed(1)} ms` },
@@ -64,7 +64,7 @@ export function DataPreview({ health }: DataPreviewProps) {
             ].map((m) => (
               <div key={m.label} className="text-center">
                 <div className="text-lg font-bold text-[#0D7A66]">{m.value}</div>
-                <div className="text-xs text-gray-400">{m.label}</div>
+                <div className="text-xs text-[var(--text-3)]">{m.label}</div>
               </div>
             ))}
           </div>

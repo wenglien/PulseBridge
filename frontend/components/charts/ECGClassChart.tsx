@@ -28,9 +28,9 @@ function getClassColor(cls: string): string {
 }
 
 const RADIAN = Math.PI / 180
-function CustomLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: {
+function CustomLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: {
   cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number
-  percent: number; name: string
+  percent: number
 }) {
   if (percent < 0.05) return null
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5
@@ -62,14 +62,14 @@ export function ECGClassChart({ ecgReadings, analysis }: Props) {
   const total = pieData.reduce((a, d) => a + d.value, 0)
 
   if (pieData.length === 0) {
-    return <p className="text-sm text-gray-400 text-center py-6">無 ECG 分類資料</p>
+    return <p className="text-sm text-[var(--text-3)] text-center py-6">無 ECG 分類資料</p>
   }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
       {/* Donut */}
       <div>
-        <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">心律分類分布</p>
+        <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-3">心律分類分布</p>
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>
             <Pie
@@ -105,9 +105,9 @@ export function ECGClassChart({ ecgReadings, analysis }: Props) {
           {pieData.map((d) => (
             <div key={d.cls} className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getClassColor(d.cls) }} />
-              <span className="text-xs text-gray-600 flex-1">{d.name}</span>
-              <span className="text-xs font-semibold text-gray-800">{d.value} 次</span>
-              <span className="text-xs text-gray-400 w-10 text-right">{((d.value / total) * 100).toFixed(0)}%</span>
+              <span className="text-xs text-[var(--text-2)] flex-1">{d.name}</span>
+              <span className="text-xs font-semibold text-[var(--text-1)]">{d.value} 次</span>
+              <span className="text-xs text-[var(--text-3)] w-10 text-right">{((d.value / total) * 100).toFixed(0)}%</span>
             </div>
           ))}
         </div>
@@ -115,7 +115,7 @@ export function ECGClassChart({ ecgReadings, analysis }: Props) {
 
       {/* Horizontal bar chart */}
       <div>
-        <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">各類型次數</p>
+        <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-3">各類型次數</p>
         <ResponsiveContainer width="100%" height={Math.max(140, pieData.length * 36)}>
           <BarChart
             data={pieData}

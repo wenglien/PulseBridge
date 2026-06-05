@@ -1,7 +1,6 @@
 "use client"
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine, Cell, RadarChart,
+  Tooltip, ResponsiveContainer, RadarChart,
   Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from "recharts"
 import type { HRVMetrics } from "@/types/health"
@@ -67,9 +66,9 @@ function RangeBar({ metric }: { metric: MetricRange }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">{metric.label}</span>
+        <span className="text-xs text-[var(--text-2)]">{metric.label}</span>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-gray-900 font-mono">
+          <span className="text-sm font-bold text-[var(--text-1)] font-mono">
             {value % 1 === 0 ? value : value.toFixed(2)}{metric.unit}
           </span>
           <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${bandBg(band)}`}>
@@ -79,7 +78,7 @@ function RangeBar({ metric }: { metric: MetricRange }) {
       </div>
 
       {/* Zone bar */}
-      <div className="relative h-3 rounded-full overflow-hidden bg-gray-100">
+      <div className="relative h-3 rounded-full overflow-hidden bg-[var(--surface-muted)]">
         {/* danger left zone */}
         <div className="absolute top-0 left-0 h-full bg-red-100" style={{ width: `${warnLoPct}%` }} />
         {/* warning left zone */}
@@ -102,7 +101,7 @@ function RangeBar({ metric }: { metric: MetricRange }) {
         />
       </div>
 
-      <div className="flex justify-between text-[10px] text-gray-400">
+      <div className="flex justify-between text-[10px] text-[var(--text-3)]">
         <span>{displayMin}{metric.unit}</span>
         <span className="text-[#0D7A66]">正常 {goodMin}–{goodMax}</span>
         <span>{displayMax}{metric.unit}</span>
@@ -173,7 +172,7 @@ export function HRVGaugeBars({ hrv, analysis }: Props) {
       {/* Radar overview + mean HR */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <p className="text-xs text-gray-400 mb-2 uppercase tracking-wider">HRV 綜合評分</p>
+          <p className="text-xs text-[var(--text-3)] mb-2 uppercase tracking-wider">HRV 綜合評分</p>
           <ResponsiveContainer width="100%" height={200}>
             <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
               <defs>
@@ -213,10 +212,10 @@ export function HRVGaugeBars({ hrv, analysis }: Props) {
               note: "迷走神經張力",
             },
           ].map((item) => (
-            <div key={item.label} className="rounded-xl bg-gray-50 border border-gray-200 p-3">
-              <p className="text-[10px] text-gray-400">{item.note}</p>
-              <p className="text-sm font-bold text-gray-900 mt-0.5">{item.value}</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">{item.label}</p>
+            <div key={item.label} className="rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] p-3">
+              <p className="text-[10px] text-[var(--text-3)]">{item.note}</p>
+              <p className="text-sm font-bold text-[var(--text-1)] mt-0.5">{item.value}</p>
+              <p className="text-[10px] text-[var(--text-2)] mt-0.5">{item.label}</p>
             </div>
           ))}
         </div>
@@ -224,7 +223,7 @@ export function HRVGaugeBars({ hrv, analysis }: Props) {
 
       {/* Range bars */}
       <div className="space-y-4">
-        <p className="text-xs text-gray-400 uppercase tracking-wider">各指標參考區間</p>
+        <p className="text-xs text-[var(--text-3)] uppercase tracking-wider">各指標參考區間</p>
         {metrics.map((m) => (
           <RangeBar key={m.key} metric={m} />
         ))}

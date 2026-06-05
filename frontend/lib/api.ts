@@ -128,11 +128,29 @@ export const api = {
   extractProgress: (sessionId: string): Promise<{ pct: number }> =>
     request(`/api/health-data/extract-progress/${sessionId}`),
 
-  addEcgCsv: (sessionId: string, file: File): Promise<{ session_id: string; ecg_count: number }> => {
+  addEcgCsv: (sessionId: string, file: File): Promise<{ session_id: string; ecg_count: number; added_count?: number }> => {
     const form = new FormData()
     form.append("session_id", sessionId)
     form.append("file", file)
     return fetch(`${API_BASE}/api/health-data/add-ecg-csv`, { method: "POST", body: form })
+      .then(async (r) => {
+        if (!r.ok) throw new Error((await r.json()).detail ?? "Upload failed")
+        return r.json()
+      })
+  },
+
+  addEcgCsvBatch: (sessionId: string, files: File[]): Promise<{
+    session_id: string
+    ecg_count: number
+    added_count: number
+    file_count: number
+    parsed_file_count: number
+    failed_files: string[]
+  }> => {
+    const form = new FormData()
+    form.append("session_id", sessionId)
+    files.forEach((file) => form.append("files", file))
+    return fetch(`${API_BASE}/api/health-data/add-ecg-csv-batch`, { method: "POST", body: form })
       .then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).detail ?? "Upload failed")
         return r.json()

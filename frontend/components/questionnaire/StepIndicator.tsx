@@ -14,13 +14,13 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
         return (
           <div key={step.id} className="flex items-center gap-1 sm:gap-2">
             <div className={cn(
-              "flex items-center justify-center rounded-xl transition-all duration-300",
+              "flex items-center justify-center rounded-lg transition-all duration-300",
               "text-xs sm:text-sm font-medium",
               isActive
                 ? "w-auto px-3 py-1.5 bg-[#0D7A66] text-white shadow-sm"
                 : isDone
                 ? "w-7 h-7 bg-[#E8F5F2] text-[#0D7A66]"
-                : "w-7 h-7 bg-gray-100 text-gray-400",
+                : "w-7 h-7 bg-[var(--surface-muted)] text-[var(--text-3)]",
             )}>
               {isDone ? (
                 <div className="w-2 h-2 rounded-full bg-[#0D7A66]" />
@@ -33,7 +33,7 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
             {i < QUESTIONNAIRE_STEPS.length - 1 && (
               <div className={cn(
                 "h-px w-4 sm:w-6 transition-colors duration-300",
-                isDone ? "bg-[#0D7A66]/40" : "bg-gray-200",
+                isDone ? "bg-[#0D7A66]/40" : "bg-[var(--border)]",
               )} />
             )}
           </div>

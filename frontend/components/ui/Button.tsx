@@ -11,10 +11,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-[#0D7A66] hover:bg-[#1A9479] text-white border border-[#0D7A66] shadow-sm",
-  secondary: "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300",
-  ghost: "hover:bg-gray-100 text-gray-600 hover:text-gray-900",
-  danger: "bg-white hover:bg-red-50 text-red-600 border border-red-200",
+  primary: "bg-[#0D7A66] hover:bg-[#1A9479] text-white border border-[#0D7A66] shadow-sm shadow-[#0D7A66]/15",
+  secondary: "bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[var(--text-1)] border border-[var(--border-mid)]",
+  ghost: "hover:bg-[var(--surface-muted)] text-[var(--text-2)] hover:text-[var(--text-1)]",
+  danger: "bg-[var(--surface)] hover:bg-red-50 text-red-600 border border-red-200",
 }
 
 const sizes: Record<ButtonSize, string> = {
@@ -31,7 +31,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-200",
         "disabled:opacity-50 disabled:cursor-not-allowed",
-        "active:scale-[0.98]",
+        "active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D7A66]/35",
         variants[variant],
         sizes[size],
         className,

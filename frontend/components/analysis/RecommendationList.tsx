@@ -22,8 +22,8 @@ export function RecommendationList({ recommendations, references }: Recommendati
 
   if (!recommendations.length) {
     return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-        <p className="text-gray-400 text-sm text-center py-8">暫無調養建議</p>
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 shadow-sm">
+        <p className="text-[var(--text-3)] text-sm text-center py-8">暫無調養建議</p>
       </div>
     )
   }
@@ -31,8 +31,8 @@ export function RecommendationList({ recommendations, references }: Recommendati
   const active = activeTab as (typeof RECOMMENDATION_CATEGORIES)[number]
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-      <p className="text-xs text-gray-400 uppercase tracking-wider mb-4">調養建議</p>
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 shadow-sm">
+      <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-4">調養建議</p>
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-5">
@@ -44,7 +44,7 @@ export function RecommendationList({ recommendations, references }: Recommendati
               "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-all duration-200",
               activeTab === cat
                 ? "bg-[#0D7A66] text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900",
+                : "bg-[var(--surface-muted)] text-[var(--text-2)] hover:bg-[var(--border)] hover:text-[var(--text-1)]",
             )}
           >
             <span>{categoryLabel(cat)}</span>
@@ -58,7 +58,7 @@ export function RecommendationList({ recommendations, references }: Recommendati
         {(byCat[active] ?? []).map((rec, i) => (
           <div
             key={i}
-            className="flex gap-4 p-4 rounded-xl bg-gray-50 border border-gray-200 hover:border-gray-300 transition-colors"
+            className="flex gap-4 p-4 rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] hover:border-[var(--border-mid)] transition-colors"
           >
             <div className="flex-shrink-0 mt-0.5">
               <span
@@ -72,7 +72,7 @@ export function RecommendationList({ recommendations, references }: Recommendati
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <p className="text-sm font-medium text-gray-900">{rec.title_zh}</p>
+                <p className="text-sm font-medium text-[var(--text-1)]">{rec.title_zh}</p>
                 <span className={cn(
                   "text-xs px-1.5 py-0.5 rounded-md",
                   rec.evidence_basis === "tcm" ? "bg-[#FEF3DC] text-[#855D16]" :
@@ -82,7 +82,7 @@ export function RecommendationList({ recommendations, references }: Recommendati
                   {rec.evidence_basis === "tcm" ? "中醫" : rec.evidence_basis === "western" ? "西醫" : "整合"}
                 </span>
               </div>
-              <p className="text-sm text-gray-500 leading-relaxed">{rec.content_zh}</p>
+              <p className="text-sm text-[var(--text-2)] leading-relaxed">{rec.content_zh}</p>
               <CitationChips codes={rec.citations} references={references} />
             </div>
           </div>

@@ -2,6 +2,7 @@
 
 上傳 Apple Watch 的 ECG、HRV 與睡眠數據，結合五步症狀問卷，由 AI 生成融合中西醫觀點的個人化健康分析報告，並支援即時追問與一鍵匯出就醫 PDF。
 網頁版專案已上線：https://pulse-ai-d54fb.web.app/
+
 > Upload your Apple Watch ECG, HRV, and sleep data. Complete a five-step symptom questionnaire. Get a bilingual AI-generated health report that bridges Western biomarkers with Traditional Chinese Medicine — then ask follow-up questions or export a doctor-ready PDF in one click.
 
 ---
@@ -79,8 +80,8 @@
 ### 1 — Clone
 
 ```bash
-git clone https://github.com/your-org/pulsebridge.git
-cd pulsebridge
+git clone https://github.com/wenglien/PulseBridge.git
+cd PulseBridge
 ```
 
 ### 2 — Backend
@@ -113,6 +114,27 @@ npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+---
+
+## Quality & Optimization Notes
+
+- Frontend builds are pinned to the `frontend/` workspace root via `turbopack.root`, avoiding accidental root detection when another `package-lock.json` exists higher in the filesystem.
+- HRV frequency-domain integration uses `numpy.trapezoid`, which keeps the analyzer compatible with current NumPy versions without deprecation warnings.
+- Large/generated artifacts are excluded from source control: `frontend/node_modules/`, `frontend/.next/`, `frontend/out/`, `backend/data/`, and root-level `data/`.
+
+### Checks
+
+```bash
+# Backend
+cd backend
+python3 -m pytest
+
+# Frontend
+cd frontend
+npm run lint
+npm run build
+```
 
 ---
 
@@ -200,12 +222,6 @@ pulsebridge/
 - ECG analysis is limited to Apple Watch single-lead readings and cannot detect all cardiac conditions.
 - TCM constitution scoring is rule-based and not a substitute for diagnosis by a qualified TCM practitioner.
 - Analysis quality depends on the quantity and quality of uploaded data; sparse data yields lower-confidence results.
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
