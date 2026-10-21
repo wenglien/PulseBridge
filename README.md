@@ -34,7 +34,7 @@
                          ┌───────────────────────────┼──────────────────┐
                   ┌──────▼───────┐   ┌───────────────▼──┐   ┌───────────▼──────┐
                   │   Groq API   │   │    Firestore     │   │  Cloud Storage   │
-                  │ (LLaMA 3.3)  │   │ index · users    │   │ payloads·uploads │
+                  │ (gpt-oss-120b)│   │ index · users    │   │ payloads·uploads │
                   └──────────────┘   └──────────────────┘   └──────────────────┘
 ```
 
@@ -69,7 +69,7 @@ the tokens it was given in `localStorage`. There is no global session list.
 - Google Cloud Run
 
 **AI**
-- Groq API (`llama-3.3-70b-versatile` by default)
+- Groq API (`openai/gpt-oss-120b` by default)
 - Drop-in compatible with any OpenAI-compatible endpoint
 
 ---
@@ -130,7 +130,7 @@ Open `http://localhost:3000`.
 |---|---|---|
 | `GROQ_API_KEY` | Yes | Groq API key |
 | `JWT_SECRET` | Yes | Random secret for signing JWTs — generate with `python -c "import secrets; print(secrets.token_hex(32))"` |
-| `GROQ_MODEL` | No | Model name (default: `llama-3.3-70b-versatile`) |
+| `GROQ_MODEL` | No | Model name (default: `openai/gpt-oss-120b`) |
 | `DATA_DIR` | No | Path for session data (default: `./data`) |
 | `CORS_ORIGINS` | No | Comma-separated allowed origins (default: `http://localhost:3000`) |
 | `CORS_ORIGIN_REGEX` | No | Regex for dynamic origins, e.g. Firebase preview channels |
