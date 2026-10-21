@@ -1,4 +1,6 @@
 "use client"
+import type { HRVReferenceRange } from "@/types/analysis"
+import { hrvBand, lfhfBand } from "@/lib/hrvRanges"
 
 /**
  * A compact horizontal range meter that shows where a metric's current value sits
@@ -50,12 +52,12 @@ function getStatus(value: number, cfg: RangeConfig): "good" | "warning" | "dange
 }
 
 const STATUS_STYLES = {
-  good:    "bg-[#E8F5F2] text-[#0D7A66] border-[#9FD1C8]",
+  good:    "bg-[var(--primary-wash)] text-[var(--primary)] border-[var(--primary-line)]",
   warning: "bg-yellow-50 text-yellow-700 border-yellow-200",
   danger:  "bg-red-50 text-red-700 border-red-200",
 }
 const STATUS_FILL = {
-  good: "#0D7A66", warning: "#F59E0B", danger: "#DC2626",
+  good: "var(--primary)", warning: "var(--honey)", danger: "var(--brick)",
 }
 const STATUS_LABEL = {
   good: "正常", warning: "注意", danger: "異常",
@@ -64,10 +66,29 @@ const STATUS_LABEL = {
 interface Props {
   metricKey: string
   currentValue: string
+  /** Age-bracket reference from the analysis; overrides adult defaults for HRV metrics. */
+  reference?: HRVReferenceRange | null
 }
 
-export function MetricRangeMeter({ metricKey, currentValue }: Props) {
-  const cfg = METRIC_RANGES[metricKey]
+function resolveConfig(metricKey: string, reference?: HRVReferenceRange | null): (RangeConfig & { ageAdjusted?: boolean }) | undefined {
+  const base = METRIC_RANGES[metricKey]
+  if (!base) return undefined
+  const band =
+    metricKey === "sdnn" || metricKey === "rmssd" ? hrvBand(metricKey, reference)
+    : metricKey === "lf_hf" ? lfhfBand(reference)
+    : null
+  if (!band) return base
+  return {
+    ...base,
+    goodMin: band.goodMin, goodMax: band.goodMax,
+    warnMin: band.warnMin, warnMax: band.warnMax,
+    max: Math.max(base.max, band.displayMax),
+    ageAdjusted: band.ageAdjusted,
+  }
+}
+
+export function MetricRangeMeter({ metricKey, currentValue, reference }: Props) {
+  const cfg = resolveConfig(metricKey, reference)
   const value = parseValue(currentValue)
 
   if (!cfg || value === null) return null
@@ -87,35 +108,41 @@ export function MetricRangeMeter({ metricKey, currentValue }: Props) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-[var(--text-3)]">參考區間</span>
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${STATUS_STYLES[status]}`}>
+        <span className="text-xs text-gray-400">
+          {cfg.ageAdjusted && reference ? `同齡參考（${reference.age_bracket}）` : "參考區間"}
+        </span>
+        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLES[status]}`}>
           {STATUS_LABEL[status]}
         </span>
       </div>
 
       {/* Zone bar */}
-      <div className="relative h-2.5 rounded-full overflow-hidden bg-[var(--surface-muted)]">
+      <div className="relative h-3">
+        <div className="absolute inset-0 rounded-full overflow-hidden bg-gray-100">
         {/* danger left */}
         <div className="absolute top-0 left-0 h-full bg-red-100" style={{ width: `${warnLoPct}%` }} />
         {/* warning left */}
         <div className="absolute top-0 h-full bg-yellow-100" style={{ left: `${warnLoPct}%`, width: `${goodLoPct - warnLoPct}%` }} />
         {/* good */}
-        <div className="absolute top-0 h-full bg-[#C6EDE6]" style={{ left: `${goodLoPct}%`, width: `${goodHiPct - goodLoPct}%` }} />
+        <div className="absolute top-0 h-full bg-green-200" style={{ left: `${goodLoPct}%`, width: `${goodHiPct - goodLoPct}%` }} />
         {/* warning right */}
         <div className="absolute top-0 h-full bg-yellow-100" style={{ left: `${goodHiPct}%`, width: `${warnHiPct - goodHiPct}%` }} />
         {/* danger right */}
         <div className="absolute top-0 h-full bg-red-100" style={{ left: `${warnHiPct}%`, right: 0 }} />
+        </div>
 
         {/* Value dot */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white shadow"
-          style={{ left: `calc(${valuePct}% - 6px)`, backgroundColor: fillColor }}
+          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-[3px] border-[var(--surface)] shadow-[0_0_0_1px_var(--line-2)]"
+          style={{ left: `calc(${valuePct}% - 8px)`, backgroundColor: fillColor }}
         />
       </div>
 
-      <div className="flex justify-between text-[10px] text-[var(--text-3)]">
+      <div className="flex justify-between text-xs text-gray-400">
         <span>最低 {cfg.min}{cfg.unit ?? ""}</span>
-        <span className="text-[#0D7A66] font-medium">目標 {cfg.goodMin}–{cfg.goodMax}{cfg.unit ?? ""}</span>
+        <span className="text-[var(--primary)] font-medium">
+          {cfg.ageAdjusted ? `目標 ${cfg.goodMin}${cfg.unit ?? ""} 以上` : `目標 ${cfg.goodMin}–${cfg.goodMax}${cfg.unit ?? ""}`}
+        </span>
         <span>最高 {cfg.max}{cfg.unit ?? ""}</span>
       </div>
     </div>

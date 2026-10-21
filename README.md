@@ -28,15 +28,21 @@
 ┌─────────────────────────────┐      ┌──────────────────────────────┐
 │  Next.js 16 (App Router)    │      │  FastAPI (Python)            │
 │  TypeScript · Tailwind CSS  │ HTTP │  Pydantic v2 · SQLAlchemy    │
-│  Recharts · Framer Motion   │◄────►│  NumPy · SciPy               │
+│  Recharts · Radix UI        │◄────►│  NumPy · SciPy               │
 │  Firebase Hosting (static)  │      │  Google Cloud Run            │
 └─────────────────────────────┘      └──────────────┬───────────────┘
-                                                     │ HTTPS
-                                              ┌──────▼───────┐
-                                              │   Groq API   │
-                                              │ (LLaMA 3.3)  │
-                                              └──────────────┘
+                                                     │
+                         ┌───────────────────────────┼──────────────────┐
+                  ┌──────▼───────┐   ┌───────────────▼──┐   ┌───────────▼──────┐
+                  │   Groq API   │   │    Firestore     │   │  Cloud Storage   │
+                  │(gpt-oss-120b)│   │ index · users    │   │ payloads·uploads │
+                  └──────────────┘   └──────────────────┘   └──────────────────┘
 ```
+
+**Privacy model:** every check-in gets a random access token when it is
+created. The API serves a session only to a request carrying that token in
+the `X-Session-Token` header (or to its signed-in owner); the browser keeps
+the tokens it was given in `localStorage`. There is no global session list.
 
 **Data flow:**
 1. User uploads `export.xml` → browser gzips it → backend streams-parses only the requested date range
@@ -52,19 +58,19 @@
 
 **Frontend**
 - Next.js 16 · React 19 · TypeScript 5
-- Tailwind CSS v4 · Framer Motion
+- Tailwind CSS v4
 - Recharts · Radix UI
 - Firebase Hosting (static export via `output: "export"`)
 
 **Backend**
 - FastAPI · Uvicorn · Pydantic v2
-- SQLAlchemy (SQLite by default, PostgreSQL-ready)
+- Storage: Firestore + Cloud Storage on Cloud Run; SQLAlchemy/SQLite locally
 - NumPy / SciPy (HRV frequency-domain analysis)
 - httpx (async Groq API calls)
 - Google Cloud Run
 
 **AI**
-- Groq API (`llama-3.3-70b-versatile` by default)
+- Groq API (`openai/gpt-oss-120b` by default)
 - Drop-in compatible with any OpenAI-compatible endpoint
 
 ---
@@ -120,7 +126,8 @@ Open `http://localhost:3000`.
 ## Quality & Optimization Notes
 
 - Frontend builds are pinned to the `frontend/` workspace root via `turbopack.root`, avoiding accidental root detection when another `package-lock.json` exists higher in the filesystem.
-- HRV frequency-domain integration uses `numpy.trapezoid`, which keeps the analyzer compatible with current NumPy versions without deprecation warnings.
+- HRV frequency-domain integration uses `numpy.trapezoid` when available and falls back to `numpy.trapz`, so it works with the pinned NumPy 1.26 and with NumPy 2.
+- CI (`.github/workflows/ci.yml`) runs the backend tests and the frontend lint, type check and build on every push and pull request.
 - Large/generated artifacts are excluded from source control: `frontend/node_modules/`, `frontend/.next/`, `frontend/out/`, `backend/data/`, and root-level `data/`.
 
 ### Checks
@@ -146,11 +153,17 @@ npm run build
 |---|---|---|
 | `GROQ_API_KEY` | Yes | Groq API key |
 | `JWT_SECRET` | Yes | Random secret for signing JWTs — generate with `python -c "import secrets; print(secrets.token_hex(32))"` |
-| `GROQ_MODEL` | No | Model name (default: `llama-3.3-70b-versatile`) |
+| `GROQ_MODEL` | No | Model name (default: `openai/gpt-oss-120b`) |
 | `DATA_DIR` | No | Path for session data (default: `./data`) |
 | `CORS_ORIGINS` | No | Comma-separated allowed origins (default: `http://localhost:3000`) |
 | `CORS_ORIGIN_REGEX` | No | Regex for dynamic origins, e.g. Firebase preview channels |
-| `DATABASE_URL` | No | Full DB URL; leave blank for SQLite |
+| `STORAGE_BACKEND` | No | `sql` (default, local dev) or `firestore` (Cloud Run) |
+| `DATABASE_URL` | No | SQL backend only: full DB URL; leave blank for SQLite |
+| `GCP_PROJECT` / `GCS_BUCKET` | With `firestore` | Project and private bucket for payloads and uploads |
+| `FIRESTORE_DATABASE` / `FIRESTORE_PREFIX` | No | Non-default database; name prefix to isolate staging |
+| `MAX_XML_SIZE_MB` | No | Upper bound for the decompressed export (default 4096) |
+
+Deploying to Cloud Run with Firestore and Cloud Storage: see [docs/deploy-cloud-run.md](docs/deploy-cloud-run.md).
 
 ### Frontend (`frontend/.env.local`)
 

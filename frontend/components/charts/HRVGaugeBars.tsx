@@ -5,6 +5,7 @@ import {
 } from "recharts"
 import type { HRVMetrics } from "@/types/health"
 import type { HRVAnalysis } from "@/types/analysis"
+import { hrvBand, lfhfBand, type Band } from "@/lib/hrvRanges"
 
 interface Props {
   hrv: HRVMetrics
@@ -24,6 +25,8 @@ interface MetricRange {
   displayMin: number
   displayMax: number
   higherIsBetter: boolean
+  /** Band taken from the person's age bracket (open-ended upwards). */
+  ageAdjusted?: boolean
 }
 
 function getRangeBand(value: number, r: MetricRange): "good" | "warning" | "danger" {
@@ -33,11 +36,11 @@ function getRangeBand(value: number, r: MetricRange): "good" | "warning" | "dang
 }
 
 function bandColor(band: "good" | "warning" | "danger"): string {
-  return band === "good" ? "#0D7A66" : band === "warning" ? "#F59E0B" : "#DC2626"
+  return band === "good" ? "var(--primary)" : band === "warning" ? "var(--honey)" : "var(--brick)"
 }
 
 function bandBg(band: "good" | "warning" | "danger"): string {
-  return band === "good" ? "bg-[#E8F5F2] text-[#0D7A66] border-[#9FD1C8]"
+  return band === "good" ? "bg-[var(--primary-wash)] text-[var(--primary)] border-[var(--primary-line)]"
        : band === "warning" ? "bg-yellow-50 text-yellow-700 border-yellow-200"
        : "bg-red-50 text-red-700 border-red-200"
 }
@@ -66,25 +69,25 @@ function RangeBar({ metric }: { metric: MetricRange }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-[var(--text-2)]">{metric.label}</span>
+        <span className="text-xs text-gray-500">{metric.label}</span>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-[var(--text-1)] font-mono">
+          <span className="text-sm font-bold text-gray-900">
             {value % 1 === 0 ? value : value.toFixed(2)}{metric.unit}
           </span>
-          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${bandBg(band)}`}>
+          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${bandBg(band)}`}>
             {bandLabel(band)}
           </span>
         </div>
       </div>
 
       {/* Zone bar */}
-      <div className="relative h-3 rounded-full overflow-hidden bg-[var(--surface-muted)]">
+      <div className="relative h-3 rounded-full overflow-hidden bg-gray-100">
         {/* danger left zone */}
         <div className="absolute top-0 left-0 h-full bg-red-100" style={{ width: `${warnLoPct}%` }} />
         {/* warning left zone */}
         <div className="absolute top-0 h-full bg-yellow-100" style={{ left: `${warnLoPct}%`, width: `${goodLoPct - warnLoPct}%` }} />
         {/* good zone */}
-        <div className="absolute top-0 h-full bg-[#E8F5F2]" style={{ left: `${goodLoPct}%`, width: `${goodHiPct - goodLoPct}%` }} />
+        <div className="absolute top-0 h-full bg-[var(--primary-wash)]" style={{ left: `${goodLoPct}%`, width: `${goodHiPct - goodLoPct}%` }} />
         {/* warning right zone */}
         <div className="absolute top-0 h-full bg-yellow-100" style={{ left: `${goodHiPct}%`, width: `${warnHiPct - goodHiPct}%` }} />
         {/* danger right zone */}
@@ -92,18 +95,20 @@ function RangeBar({ metric }: { metric: MetricRange }) {
 
         {/* Value pointer */}
         <div
-          className="absolute top-0 h-full w-0.5 shadow-sm"
+          className="absolute top-0 h-full w-0.5"
           style={{ left: `${pct}%`, backgroundColor: color, transition: "left 0.4s ease" }}
         />
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md"
+          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-[var(--surface)] shadow-md"
           style={{ left: `calc(${pct}% - 6px)`, backgroundColor: color, transition: "left 0.4s ease" }}
         />
       </div>
 
-      <div className="flex justify-between text-[10px] text-[var(--text-3)]">
+      <div className="flex justify-between text-xs text-gray-400">
         <span>{displayMin}{metric.unit}</span>
-        <span className="text-[#0D7A66]">正常 {goodMin}–{goodMax}</span>
+        <span className="text-[var(--primary)]">
+          {metric.ageAdjusted ? `同齡正常 ${goodMin} 以上` : `正常 ${goodMin}–${goodMax}`}
+        </span>
         <span>{displayMax}{metric.unit}</span>
       </div>
     </div>
@@ -134,27 +139,32 @@ export function HRVGaugeBars({ hrv, analysis }: Props) {
   const lfhf  = fd?.lf_hf_ratio ?? hrv.lf_hf_ratio
   const meanRR = td?.mean_rr_ms ?? hrv.mean_rr
 
+  const ref = analysis?.reference_range
+  const withBand = (m: MetricRange, band: Band | null): MetricRange =>
+    band ? { ...m, goodMin: band.goodMin, goodMax: band.goodMax, warnMin: band.warnMin, warnMax: band.warnMax,
+             displayMax: Math.max(m.displayMax, band.displayMax), ageAdjusted: band.ageAdjusted } : m
+
   const metrics: MetricRange[] = [
-    {
+    withBand({
       key: "sdnn", label: "SDNN（整體自律神經調節）", unit: "ms",
       value: sdnn, goodMin: 50, goodMax: 100, warnMin: 25, warnMax: 120,
       displayMin: 0, displayMax: 150, higherIsBetter: true,
-    },
-    {
+    }, hrvBand("sdnn", ref)),
+    withBand({
       key: "rmssd", label: "RMSSD（副交感活性）", unit: "ms",
       value: rmssd, goodMin: 25, goodMax: 60, warnMin: 15, warnMax: 80,
       displayMin: 0, displayMax: 100, higherIsBetter: true,
-    },
+    }, hrvBand("rmssd", ref)),
     {
       key: "pnn50", label: "pNN50（短期心率調節）", unit: "%",
       value: pnn50, goodMin: 5, goodMax: 30, warnMin: 2, warnMax: 40,
       displayMin: 0, displayMax: 50, higherIsBetter: true,
     },
-    {
+    withBand({
       key: "lfhf", label: "LF/HF 比值（交感/副交感平衡）", unit: "",
       value: lfhf, goodMin: 0.5, goodMax: 3.0, warnMin: 0.2, warnMax: 5.0,
       displayMin: 0, displayMax: 8, higherIsBetter: false,
-    },
+    }, lfhfBand(ref)),
   ]
 
   const norm = normalizeHRV(hrv, analysis)
@@ -172,22 +182,22 @@ export function HRVGaugeBars({ hrv, analysis }: Props) {
       {/* Radar overview + mean HR */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <p className="text-xs text-[var(--text-3)] mb-2 uppercase tracking-wider">HRV 綜合評分</p>
+          <p className="text-xs text-gray-400 mb-2">HRV 綜合評分</p>
           <ResponsiveContainer width="100%" height={200}>
             <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
               <defs>
                 <radialGradient id="hrvFill">
-                  <stop offset="0%" stopColor="#0D7A66" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#0D7A66" stopOpacity={0.05} />
+                  <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.05} />
                 </radialGradient>
               </defs>
-              <PolarGrid stroke="#E5E7EB" />
-              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fontWeight: 600, fill: "#374151" }} />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: "#9CA3AF" }} tickCount={3} axisLine={false} />
-              <Radar dataKey="value" stroke="#0D7A66" strokeWidth={2} fill="url(#hrvFill)"
-                dot={{ fill: "#0D7A66", strokeWidth: 0, r: 3 }} name="評分" />
+              <PolarGrid stroke="var(--line)" />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fontWeight: 600, fill: "var(--ink-700)" }} />
+              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: "var(--ink-4)" }} tickCount={3} axisLine={false} />
+              <Radar dataKey="value" stroke="var(--primary)" strokeWidth={2} fill="url(#hrvFill)"
+                dot={{ fill: "var(--primary)", strokeWidth: 0, r: 3 }} name="評分" />
               <Tooltip
-                contentStyle={{ backgroundColor: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+                contentStyle={{ backgroundColor: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, fontSize: 12, boxShadow: "var(--shadow-soft)" }}
                 formatter={(v: unknown) => [`${v} 分`, ""]}
               />
             </RadarChart>
@@ -212,10 +222,10 @@ export function HRVGaugeBars({ hrv, analysis }: Props) {
               note: "迷走神經張力",
             },
           ].map((item) => (
-            <div key={item.label} className="rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] p-3">
-              <p className="text-[10px] text-[var(--text-3)]">{item.note}</p>
-              <p className="text-sm font-bold text-[var(--text-1)] mt-0.5">{item.value}</p>
-              <p className="text-[10px] text-[var(--text-2)] mt-0.5">{item.label}</p>
+            <div key={item.label} className="rounded-2xl bg-[var(--wash)] p-3">
+              <p className="text-xs text-gray-400">{item.note}</p>
+              <p className="text-sm font-bold text-gray-900 mt-0.5">{item.value}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{item.label}</p>
             </div>
           ))}
         </div>
@@ -223,7 +233,7 @@ export function HRVGaugeBars({ hrv, analysis }: Props) {
 
       {/* Range bars */}
       <div className="space-y-4">
-        <p className="text-xs text-[var(--text-3)] uppercase tracking-wider">各指標參考區間</p>
+        <p className="text-xs text-gray-400">各指標參考區間</p>
         {metrics.map((m) => (
           <RangeBar key={m.key} metric={m} />
         ))}

@@ -45,69 +45,70 @@ export function HRVTrendChart({ series, reference }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <p className="text-xs text-[var(--text-3)] uppercase tracking-wider">SDNN 趨勢</p>
-          <p className="text-xs text-[var(--text-2)] mt-0.5">
-            共 {series.length} 筆記錄，平均 {userAvg} ms
-            {reference && (
-              <span className="ml-1">
-                · 同齡層（{reference.age_bracket}）中位數 {reference.sdnn_p50} ms
-              </span>
-            )}
+          <h3 className="text-[17px] font-medium text-[var(--ink)]">最近 {series.length} 筆 SDNN</h3>
+          <p className="text-sm text-[var(--ink-3)] mt-0.5">
+            你的平均 {userAvg} ms
+            {reference && <>，同齡層（{reference.age_bracket} 歲）中位數 {reference.sdnn_p50} ms</>}
           </p>
         </div>
         {reference?.sdnn_percentile != null && (
-          <span className="text-xs px-2 py-1 rounded-lg bg-[#E8F5F2] text-[#0D7A66] border border-[#9FD1C8]">
-            平均落在第 {reference.sdnn_percentile} 百分位
+          <span className="text-sm px-3 py-1 rounded-full bg-[var(--mist-wash)] text-[var(--mist)]">
+            約在同齡第 {reference.sdnn_percentile} 百分位
           </span>
         )}
       </div>
 
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={data} margin={{ top: 10, right: 20, bottom: 5, left: 0 }}>
-          <CartesianGrid stroke="#F3F4F6" strokeDasharray="3 3" />
+          <CartesianGrid stroke="var(--wash-2)" strokeDasharray="3 3" />
           <XAxis
             dataKey="label"
-            tick={{ fontSize: 10, fill: "#6B7280" }}
+            tick={{ fontSize: 11, fill: "var(--ink-3)" }}
             interval="preserveStartEnd"
             minTickGap={24}
           />
           <YAxis
-            domain={[yMin, yMax]}
-            tick={{ fontSize: 10, fill: "#6B7280" }}
-            label={{ value: "ms", angle: -90, position: "insideLeft", fontSize: 10, fill: "#9CA3AF" }}
+            domain={[Math.floor(yMin), Math.ceil(yMax)]}
+            allowDecimals={false}
+            tickFormatter={(v: number) => String(Math.round(v))}
+            width={36}
+            tick={{ fontSize: 11, fill: "var(--ink-3)" }}
+            label={{ value: "ms", angle: -90, position: "insideLeft", fontSize: 10, fill: "var(--ink-4)" }}
           />
 
           {reference && refP25 > 0 && refP75 > 0 && (
             <ReferenceArea
               y1={refP25}
               y2={refP75}
-              fill="#0D7A66"
+              fill="var(--primary)"
               fillOpacity={0.08}
               ifOverflow="extendDomain"
-              label={{ value: "同齡層 P25–P75", position: "insideTopRight", fontSize: 9, fill: "#0D7A66" }}
+              label={{ value: "同齡層 P25–P75", position: "insideTopRight", fontSize: 9, fill: "var(--primary)" }}
             />
           )}
           {reference && refP50 > 0 && (
             <ReferenceLine
               y={refP50}
-              stroke="#0D7A66"
+              stroke="var(--primary)"
               strokeDasharray="4 4"
               strokeWidth={1}
-              label={{ value: `P50 ${refP50}`, position: "right", fontSize: 9, fill: "#0D7A66" }}
+              label={{ value: `P50 ${refP50}`, position: "right", fontSize: 9, fill: "var(--primary)" }}
             />
           )}
 
           <Tooltip
             contentStyle={{
-              backgroundColor: "#fff",
-              border: "1px solid #E5E7EB",
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--line)",
               borderRadius: 12,
               fontSize: 12,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              boxShadow: "var(--shadow-soft)",
             }}
             labelFormatter={(_, payload) => {
               const full = payload?.[0]?.payload?.full
-              return full ? full.slice(0, 16) : ""
+              return full
+                ? new Date(full).toLocaleDateString("zh-TW", { month: "long", day: "numeric", weekday: "short" })
+                : ""
             }}
             formatter={(v) => [`${v} ms`, "SDNN"]}
           />
@@ -115,9 +116,9 @@ export function HRVTrendChart({ series, reference }: Props) {
           <Line
             type="monotone"
             dataKey="sdnn"
-            stroke="#0D7A66"
+            stroke="var(--primary)"
             strokeWidth={2}
-            dot={{ r: 2, fill: "#0D7A66", strokeWidth: 0 }}
+            dot={{ r: 2, fill: "var(--primary)", strokeWidth: 0 }}
             activeDot={{ r: 4 }}
             name="SDNN"
           />
@@ -125,9 +126,9 @@ export function HRVTrendChart({ series, reference }: Props) {
       </ResponsiveContainer>
 
       {reference && (
-        <p className="text-[10px] text-[var(--text-3)]">
+        <p className="text-sm text-[var(--ink-4)]">
           參考資料：{reference.sources.join("、")}。
-          綠色帶為同齡層 P25–P75 正常範圍。
+          淺色帶為同齡層 P25–P75 範圍。
         </p>
       )}
     </div>

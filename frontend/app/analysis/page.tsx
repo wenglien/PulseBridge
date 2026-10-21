@@ -1,8 +1,11 @@
 "use client"
 import { useSearchParams } from "next/navigation"
 import { useEffect, useState, Suspense } from "react"
-import { Bot, Download, FileText, HeartPulse, RefreshCw, UploadCloud } from "lucide-react"
+import Link from "next/link"
+import * as Tabs from "@radix-ui/react-tabs"
+import { Check, Printer, RefreshCw } from "lucide-react"
 import { PageWrapper } from "@/components/layout/PageWrapper"
+import { FlowSteps } from "@/components/flow/FlowSteps"
 import { StreamingAnalysis } from "@/components/analysis/StreamingAnalysis"
 import { HRVMetricsPanel } from "@/components/analysis/HRVMetricsPanel"
 import { HRVTrendChart } from "@/components/charts/HRVTrendChart"
@@ -13,71 +16,92 @@ import { RecommendationList } from "@/components/analysis/RecommendationList"
 import { MetricExplanationPanel } from "@/components/analysis/MetricExplanationPanel"
 import { CitationChips } from "@/components/analysis/CitationChips"
 import { ReferencesPanel } from "@/components/analysis/ReferencesPanel"
-import { DataObservationPanel } from "@/components/analysis/DataObservationPanel"
-import { RiskArcGauge } from "@/components/charts/RiskArcGauge"
 import { SymptomRadarChart } from "@/components/charts/SymptomRadarChart"
+import { ChatPanel } from "@/components/analysis/ChatPanel"
+import { CompareWithLast } from "@/components/analysis/CompareWithLast"
 import { Card } from "@/components/ui/Card"
 import { Button } from "@/components/ui/Button"
-import { Spinner } from "@/components/ui/Spinner"
-import { FadeIn } from "@/components/ui/FadeIn"
-import { ChatPanel } from "@/components/analysis/ChatPanel"
+import { BreathOrb } from "@/components/ui/BreathOrb"
 import { useAnalysis } from "@/hooks/useAnalysis"
 import { api } from "@/lib/api"
 import { printReport } from "@/lib/reportPrint"
-import type { AnalysisResult } from "@/types/analysis"
+import { cn, constitutionColor, constitutionDescription, formatDate } from "@/lib/utils"
+import type { AnalysisResult, RiskLevel } from "@/types/analysis"
 import type { HealthData } from "@/types/health"
 import type { QuestionnaireResponse } from "@/types/questionnaire"
-import { formatDate } from "@/lib/utils"
-import Link from "next/link"
 
-const followUpLabel = {
-  immediate: "立即就醫",
-  "1_week": "一週內追蹤",
-  "2_weeks": "兩週內追蹤",
-  routine: "例行追蹤",
+const FOLLOW_UP = {
+  immediate: "請立即就醫",
+  "1_week": "一週內回診追蹤",
+  "2_weeks": "兩週內再檢視一次",
+  routine: "維持例行追蹤即可",
 } as const
 
-function hasStructuredSymptoms(questionnaire: QuestionnaireResponse): boolean {
-  return ["energy", "digestion", "mood", "pain", "sleep"].some((key) =>
-    Object.values(questionnaire[key as keyof QuestionnaireResponse] as unknown as Record<string, number>)
-      .some((value) => value > 0),
+const RISK: Record<RiskLevel, { phrase: string; tone: "calm" | "caution" | "urgent"; chip: string }> = {
+  low:      { phrase: "整體狀況穩定",     tone: "calm",    chip: "bg-green-100 text-green-800" },
+  medium:   { phrase: "有幾項值得留意",   tone: "caution", chip: "bg-amber-100 text-amber-900" },
+  high:     { phrase: "建議近期就醫檢查", tone: "urgent",  chip: "bg-orange-100 text-orange-900" },
+  critical: { phrase: "請盡快就醫",       tone: "urgent",  chip: "bg-red-100 text-red-800" },
+}
+
+const SYMPTOM_GROUPS = [
+  { key: "energy",    label: "能量與疲勞", max: 18 },
+  { key: "digestion", label: "消化系統",   max: 18 },
+  { key: "mood",      label: "情緒狀態",   max: 15 },
+  { key: "pain",      label: "疼痛症狀",   max: 15 },
+  { key: "sleep",     label: "睡眠品質",   max: 12 },
+] as const
+
+const TAB_TRIGGER =
+  "px-4 sm:px-5 rounded-full text-[15px] text-[var(--ink-3)] whitespace-nowrap transition-colors " +
+  "hover:text-[var(--ink)] data-[state=active]:bg-[var(--surface)] data-[state=active]:text-[var(--ink)] " +
+  "data-[state=active]:shadow-[var(--shadow-soft)]"
+
+function SectionTitle({ children, note }: { children: React.ReactNode; note?: string }) {
+  return (
+    <div className="mb-3">
+      <h2 className="text-xl text-[var(--ink)]">{children}</h2>
+      {note && <p className="text-sm text-[var(--ink-3)] mt-0.5">{note}</p>}
+    </div>
   )
 }
 
 function AnalysisContent() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get("session")
+  const autoStart = searchParams.get("start") === "1"
 
   const { result, streaming, error, startStream, onComplete, onError } = useAnalysis()
   const [health, setHealth] = useState<HealthData | null>(null)
   const [questionnaire, setQuestionnaire] = useState<QuestionnaireResponse | null>(null)
   const [existingResult, setExistingResult] = useState<AnalysisResult | null>(null)
-  const [loadingExisting, setLoadingExisting] = useState(() => Boolean(sessionId))
+  const [loadingExisting, setLoadingExisting] = useState(Boolean(sessionId))
   const [started, setStarted] = useState(false)
   const [streamAttempt, setStreamAttempt] = useState(0)
-
-  useEffect(() => {
-    if (!sessionId) {
-      return
-    }
-    Promise.all([
-      api.getAnalysis(sessionId).catch(() => null),
-      api.getHealthData(sessionId).catch(() => null),
-      api.getQuestionnaire(sessionId).catch(() => null),
-    ]).then(([analysis, healthData, qData]) => {
-      if (analysis && analysis.status === "completed") {
-        setExistingResult(analysis)
-      }
-      if (healthData) setHealth(healthData as HealthData)
-      if (qData) setQuestionnaire(qData as QuestionnaireResponse)
-    }).finally(() => setLoadingExisting(false))
-  }, [sessionId])
 
   const handleStart = () => {
     setStarted(true)
     setStreamAttempt((prev) => prev + 1)
     startStream()
   }
+
+  useEffect(() => {
+    if (!sessionId) return
+    Promise.all([
+      api.getAnalysis(sessionId).catch(() => null),
+      api.getHealthData(sessionId).catch(() => null),
+      api.getQuestionnaire(sessionId).catch(() => null),
+    ]).then(([analysis, healthData, qData]) => {
+      const done = analysis && analysis.status === "completed"
+      if (done) setExistingResult(analysis)
+      if (healthData) setHealth(healthData as HealthData)
+      if (qData) setQuestionnaire(qData as QuestionnaireResponse)
+      // Arriving straight from the questionnaire: start without an extra click.
+      if (!done && autoStart) handleStart()
+    }).finally(() => setLoadingExisting(false))
+    // handleStart only touches setters; re-running on its identity would double-start.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, autoStart])
 
   const handleStreamError = (message: string) => {
     setStarted(false)
@@ -88,8 +112,9 @@ function AnalysisContent() {
     return (
       <PageWrapper maxWidth="md">
         <Card className="text-center py-12 space-y-4">
-          <p className="text-[var(--text-2)]">未找到會話 ID，請先上傳資料或填寫問卷</p>
-          <Link href="/upload"><Button>上傳資料</Button></Link>
+          <h1 className="text-2xl text-[var(--ink)]">還沒有報告</h1>
+          <p className="text-[var(--ink-3)]">先匯入資料或填寫問卷，就能產生你的第一份報告。</p>
+          <Link href="/upload"><Button>開始檢視</Button></Link>
         </Card>
       </PageWrapper>
     )
@@ -98,427 +123,320 @@ function AnalysisContent() {
   if (loadingExisting) {
     return (
       <PageWrapper maxWidth="md">
-        <div className="flex items-center justify-center py-24">
-          <Spinner size="lg" />
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <BreathOrb className="w-24" />
+          <p className="text-[var(--ink-3)]">正在打開報告…</p>
         </div>
       </PageWrapper>
     )
   }
 
-  const displayResult = result ?? existingResult
+  const r = result ?? existingResult
+  const fromFlow = autoStart || !r
 
   return (
-    <PageWrapper>
-      <div className="space-y-6">
-        {/* Header */}
-        <FadeIn delay={0.05}>
-          <div className="flex items-start justify-between flex-wrap gap-3">
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#E8F5F2] text-[#0D7A66]">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-[#0D7A66]">Health report</p>
-                <h1 className="text-3xl font-bold text-[var(--text-1)]">健康分析報告</h1>
-                <p className="text-[var(--text-3)] text-sm mt-1 font-mono">{sessionId}</p>
-              </div>
-            </div>
-            {displayResult && (
-              <p className="text-[var(--text-3)] text-xs">{formatDate(displayResult.analyzed_at)}</p>
-            )}
+    <PageWrapper maxWidth="lg">
+      {fromFlow && <FlowSteps current="report" sessionId={sessionId} skipped={health ? [] : ["data"]} />}
+
+      {/* ── Not started yet ── */}
+      {!r && !started && !error && (
+        <Card className="flex flex-col items-center text-center py-12 gap-5">
+          <BreathOrb className="w-28" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl text-[var(--ink)]">資料都準備好了</h1>
+            <p className="text-[var(--ink-3)] mt-2 max-w-[28em]">
+              接下來會把你的生理數據和身體感受放在一起，整理成西醫數據與中醫調養兩個角度的報告。
+            </p>
           </div>
-        </FadeIn>
+          <Button size="lg" onClick={handleStart}>產生我的報告</Button>
+        </Card>
+      )}
 
-        {/* Start streaming or show existing */}
-        {!displayResult && !started && (
-          <FadeIn delay={0.12}>
-          <Card className="overflow-hidden p-0">
-            <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
-              <div className="space-y-5 p-7 sm:p-8">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-[#E8F5F2] text-[#0D7A66]">
-                  <Bot className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-semibold text-[var(--text-1)]">產生中西醫整合報告</h2>
-                  <p className="text-[var(--text-2)] text-sm mt-3 leading-6">
-                    AI 將整合 ECG、HRV、睡眠數據和症狀問卷，生成風險摘要、指標解讀與個人化調養建議。
-                  </p>
-                </div>
-                <Button size="lg" onClick={handleStart}>
-                  開始分析
-                </Button>
-              </div>
-              <div className="border-t border-[var(--border)] bg-[var(--surface-muted)] p-6 lg:border-l lg:border-t-0">
-                <div className="grid gap-3">
-                  {[
-                    { icon: HeartPulse, title: "心血管訊號", desc: "彙整心率、ECG 分類與風險旗標" },
-                    { icon: RefreshCw, title: "恢復與壓力", desc: "比較 HRV、睡眠與症狀負擔" },
-                    { icon: FileText, title: "就醫友善摘要", desc: "整理成可匯出的結構化報告" },
-                  ].map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <div key={item.title} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-                        <div className="flex items-start gap-3">
-                          <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#0D7A66]" />
-                          <div>
-                            <p className="text-sm font-semibold text-[var(--text-1)]">{item.title}</p>
-                            <p className="mt-1 text-xs leading-5 text-[var(--text-2)]">{item.desc}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          </Card>
-          </FadeIn>
-        )}
+      {started && streaming && !r && (
+        <StreamingAnalysis
+          key={`${sessionId}-${streamAttempt}`}
+          sessionId={sessionId}
+          onComplete={onComplete}
+          onError={handleStreamError}
+        />
+      )}
 
-        {/* Streaming display */}
-        {started && streaming && !displayResult && (
-          <StreamingAnalysis
-            key={`${sessionId}-${streamAttempt}`}
-            sessionId={sessionId}
-            onComplete={onComplete}
-            onError={handleStreamError}
-          />
-        )}
+      {error && (
+        <Card className="bg-red-50 border-red-200">
+          <h2 className="text-xl text-red-800">報告沒有產生成功</h2>
+          <p className="text-[var(--ink-2)] text-[15px] mt-1">{error}</p>
+          <Button variant="secondary" size="sm" className="mt-4" onClick={handleStart}>再試一次</Button>
+        </Card>
+      )}
 
-        {error && (
-          <Card className="border-red-200">
-            <div className="flex gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
-              <div>
-                <p className="text-red-600 font-medium">分析失敗</p>
-                <p className="text-[var(--text-2)] text-sm">{error}</p>
-                <Button variant="secondary" size="sm" className="mt-3" onClick={handleStart}>
-                  重試
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Full results */}
-        {displayResult && (
-          <div className="space-y-6">
-            {/* Risk gauge + summary row */}
-            <FadeIn delay={0.08}>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Risk gauge */}
-              <Card className="flex flex-col items-center justify-center py-4">
-                <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-4 self-start">整體風險評估</p>
-                <RiskArcGauge
-                  riskLevel={displayResult.executive_summary.overall_risk_level}
-                />
-              </Card>
-
-              {/* Summary */}
-              <div className="lg:col-span-2">
-                <Card glow className="h-full">
-                  <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-3">數據總結</p>
-                  {displayResult.executive_summary.headline_zh && (
-                    <p className="text-[var(--text-1)] text-lg font-semibold mb-2">{displayResult.executive_summary.headline_zh}</p>
-                  )}
-                  {displayResult.executive_summary.key_findings.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {displayResult.executive_summary.key_findings.map((item) => (
-                        <span key={item} className="text-xs px-2 py-1 rounded-lg bg-[var(--surface-muted)] text-[var(--text-2)] border border-[var(--border)]">
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {displayResult.claude_summary_zh && (
-                    <p className="text-[var(--text-2)] leading-relaxed text-sm">{displayResult.claude_summary_zh}</p>
-                  )}
-                </Card>
-              </div>
-            </div>
-            </FadeIn>
-
-            <FadeIn>
-              <DataObservationPanel
-                health={health}
-                result={displayResult}
-                questionnaire={questionnaire}
-              />
-            </FadeIn>
-
-            {/* Symptom narrative / structured questionnaire */}
-            {questionnaire && (
-              <FadeIn>
-              <div>
-                <h2 className="text-sm font-medium text-[var(--text-3)] uppercase tracking-wider mb-3">症狀問卷分析</h2>
-                <Card className="space-y-5">
-                  {questionnaire.additional_notes && (
-                    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-4">
-                      <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-2">使用者症狀描述</p>
-                      <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--text-2)]">
-                        {questionnaire.additional_notes}
-                      </p>
-                    </div>
-                  )}
-
-                  {hasStructuredSymptoms(questionnaire) && (
-                    <div>
-                      <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-1">系統整理的症狀分布</p>
-                      <p className="text-xs text-[var(--text-2)] mb-4">以下是根據描述推斷出的各系統症狀負擔比例。</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
-                        <SymptomRadarChart data={questionnaire} />
-                        <div className="space-y-3">
-                          {[
-                            { key: "energy",    label: "能量與疲勞", max: 18 },
-                            { key: "digestion", label: "消化系統",   max: 18 },
-                            { key: "mood",      label: "情緒狀態",   max: 15 },
-                            { key: "pain",      label: "疼痛症狀",   max: 15 },
-                            { key: "sleep",     label: "睡眠品質",   max: 12 },
-                          ].map(({ key, label, max }) => {
-                            const score = Object.values(questionnaire[key as keyof QuestionnaireResponse] as unknown as Record<string, number>).reduce((a, v) => a + v, 0)
-                            const pct = Math.round((score / max) * 100)
-                            return (
-                              <div key={key}>
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs font-medium text-[var(--text-2)]">{label}</span>
-                                  <span className="text-xs font-mono text-[var(--text-2)]">{score}/{max} ({pct}%)</span>
-                                </div>
-                                <div className="h-2 rounded-full bg-[var(--surface-muted)] overflow-hidden">
-                                  <div
-                                    className="h-full rounded-full transition-all duration-500"
-                                    style={{
-                                      width: `${pct}%`,
-                                      backgroundColor: pct === 0 ? "#D1D5DB" : pct < 30 ? "#0D7A66" : pct < 60 ? "#F59E0B" : "#DC2626",
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              </div>
-              </FadeIn>
-            )}
-
-            {/* Risk alerts */}
-            <FadeIn>
-              <div>
-                <h2 className="text-sm font-medium text-[var(--text-3)] uppercase tracking-wider mb-3">
-                  風險提醒
-                </h2>
-                <RiskAlertBanner alerts={displayResult.risk_alerts} />
-              </div>
-            </FadeIn>
-
-            <FadeIn>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-3">整合心血管判讀</p>
-                <p className="text-[var(--text-2)] leading-relaxed text-sm">
-                  {displayResult.integrated_cardiac_assessment.primary_conclusion_zh}
-                </p>
-                <div className="grid grid-cols-2 gap-3 mt-4">
-                  <div className="rounded-xl bg-[var(--surface-muted)] px-3 py-2 border border-[var(--border)]">
-                    <p className="text-xs text-[var(--text-3)]">整體風險</p>
-                    <p className="text-sm text-[var(--text-1)] mt-1 uppercase">
-                      {displayResult.integrated_cardiac_assessment.cardiac_risk_level}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-[var(--surface-muted)] px-3 py-2 border border-[var(--border)]">
-                    <p className="text-xs text-[var(--text-3)]">追蹤時程</p>
-                    <p className="text-sm text-[var(--text-1)] mt-1">
-                      {followUpLabel[displayResult.integrated_cardiac_assessment.follow_up_priority]}
-                    </p>
-                  </div>
-                </div>
-                {displayResult.integrated_cardiac_assessment.red_flags.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-xs text-[var(--text-3)] mb-2">紅旗訊號</p>
-                    <div className="flex flex-wrap gap-2">
-                      {displayResult.integrated_cardiac_assessment.red_flags.map((item) => (
-                        <span key={item} className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200">
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </Card>
-
-              <Card>
-                <p className="text-xs text-[var(--text-3)] uppercase tracking-wider mb-3">數據驅動建議</p>
-                {displayResult.data_driven_recommendations.length > 0 ? (
-                  <div className="space-y-3">
-                    {displayResult.data_driven_recommendations.map((item, index) => (
-                      <div key={`${item.title_zh}-${index}`} className="rounded-xl bg-[var(--surface-muted)] border border-[var(--border)] p-4">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-[var(--text-1)]">{item.title_zh}</p>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--surface-muted)] text-[var(--text-2)] uppercase">
-                            {item.domain}
-                          </span>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#E8F5F2] text-[#0D7A66] uppercase">
-                            {item.priority}
-                          </span>
-                        </div>
-                        <p className="text-sm text-[var(--text-2)] mt-2 leading-relaxed">{item.why_zh}</p>
-                        {item.target_metric && (
-                          <p className="text-xs text-[var(--text-3)] mt-2">目標：{item.target_metric}</p>
-                        )}
-                        {item.actions.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-3">
-                            {item.actions.map((action) => (
-                              <span key={action} className="text-xs px-2 py-1 rounded-lg bg-[var(--surface)] text-[var(--text-2)] border border-[var(--border)]">
-                                {action}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <CitationChips
-                          codes={item.citations}
-                          references={displayResult.references}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-[var(--text-3)]">目前沒有額外的數據驅動建議。</p>
-                )}
-              </Card>
-            </div>
-            </FadeIn>
-
-            <FadeIn>
-              <div>
-                <h2 className="text-sm font-medium text-[var(--text-3)] uppercase tracking-wider mb-3">
-                  指標解讀與改善
-                </h2>
-                <MetricExplanationPanel items={displayResult.metric_explanations ?? []} references={displayResult.references} />
-              </div>
-            </FadeIn>
-
-            {/* HRV */}
-            {health?.hrv && health.hrv.sdnn > 0 && (
-              <FadeIn>
-                <div>
-                  <h2 className="text-sm font-medium text-[var(--text-3)] uppercase tracking-wider mb-3">
-                    心率變異性（HRV）
-                  </h2>
-                  <HRVMetricsPanel hrv={health.hrv} analysis={displayResult.hrv_analysis} />
-                  {health.hrv.sdnn_series && health.hrv.sdnn_series.length > 1 && (
-                    <Card className="mt-4">
-                      <HRVTrendChart
-                        series={health.hrv.sdnn_series}
-                        reference={displayResult.hrv_analysis?.reference_range}
-                      />
-                    </Card>
-                  )}
-                </div>
-              </FadeIn>
-            )}
-
-            {/* ECG */}
-            {health?.ecg_readings && health.ecg_readings.length > 0 && (
-              <FadeIn>
-                <div>
-                  <h2 className="text-sm font-medium text-[var(--text-3)] uppercase tracking-wider mb-3">
-                    心電圖（ECG）
-                  </h2>
-                  <ECGSummaryPanel
-                    ecgReadings={health.ecg_readings}
-                    flags={displayResult.western_flags}
-                    analysis={displayResult.ecg_analysis}
-                  />
-                </div>
-              </FadeIn>
-            )}
-
-            {/* Sleep */}
-            {health?.sleep && health.sleep.length > 0 && (
-              <FadeIn>
-                <div>
-                  <h2 className="text-sm font-medium text-[var(--text-3)] uppercase tracking-wider mb-3">
-                    睡眠分析
-                  </h2>
-                  <SleepSummaryCard sleep={health.sleep} />
-                </div>
-              </FadeIn>
-            )}
-
-            {/* Recommendations */}
-            <FadeIn>
-              <div>
-                <h2 className="text-sm font-medium text-[var(--text-3)] uppercase tracking-wider mb-3">
-                  中醫視角調養建議
-                </h2>
-                <p className="text-sm text-[var(--text-2)] mb-3">
-                  不以九種體質分類呈現，而是直接從中醫觀點整理你目前較需要留意的身體狀態與調整方向。
-                </p>
-                <RecommendationList recommendations={displayResult.recommendations} references={displayResult.references} />
-              </div>
-            </FadeIn>
-
-            {displayResult.references && Object.keys(displayResult.references).length > 0 && (
-              <FadeIn>
-                <ReferencesPanel references={displayResult.references} />
-              </FadeIn>
-            )}
-
-            {/* AI Chat Panel */}
-            <FadeIn>
-              <div>
-                <h2 className="text-sm font-medium text-[var(--text-3)] uppercase tracking-wider mb-3">
-                  AI 追問助理
-                </h2>
-                <p className="text-sm text-[var(--text-2)] mb-3">
-                  對報告有任何疑問？直接問 AI，它已完整讀取您的分析結果。
-                </p>
-                <ChatPanel sessionId={sessionId} />
-              </div>
-            </FadeIn>
-
-            {/* Actions */}
-            <FadeIn>
-            <div className="flex gap-3 flex-wrap justify-end pt-4 border-t border-[var(--border)]">
-              <Button
-                variant="secondary"
-                onClick={() => printReport(
-                  displayResult,
-                  health,
-                  sessionId,
-                  new Date().toLocaleDateString("zh-TW"),
-                )}
-              >
-                <Download className="h-4 w-4" />
-                匯出就醫報告 PDF
-              </Button>
-              <Link href="/questionnaire">
-                <Button variant="secondary">重新問卷</Button>
-              </Link>
-              <Link href="/upload">
-                <Button variant="secondary">
-                  <UploadCloud className="h-4 w-4" />
-                  上傳新資料
-                </Button>
-              </Link>
-              {!result && (
-                <Button onClick={handleStart}>重新分析</Button>
-              )}
-            </div>
-            </FadeIn>
-          </div>
-        )}
-      </div>
+      {r && <Report r={r} health={health} questionnaire={questionnaire} sessionId={sessionId} canRerun={!result} onRerun={handleStart} />}
     </PageWrapper>
+  )
+}
+
+function Report({
+  r, health, questionnaire, sessionId, canRerun, onRerun,
+}: {
+  r: AnalysisResult
+  health: HealthData | null
+  questionnaire: QuestionnaireResponse | null
+  sessionId: string
+  canRerun: boolean
+  onRerun: () => void
+}) {
+  const risk = RISK[r.executive_summary.overall_risk_level] ?? RISK.low
+  const icaRisk = r.integrated_cardiac_assessment
+  const urgentAlerts = r.risk_alerts.filter((a) => a.risk_level === "critical" || a.risk_level === "high")
+  const hasBodyData = Boolean(
+    (health?.hrv && health.hrv.sdnn > 0) || health?.ecg_readings?.length || health?.sleep?.length,
+  )
+  // Report only mounts client-side (after data loads), so reading the hash here is safe.
+  const [tab, setTab] = useState(() => {
+    const h = window.location.hash.slice(1)
+    return ["overview", "body", "tcm", "ask"].includes(h) ? h : "overview"
+  })
+  const changeTab = (v: string) => {
+    setTab(v)
+    history.replaceState(null, "", `#${v}`)
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* ── Summary ── */}
+      <section className="rounded-[28px] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-soft)] p-6 sm:p-8">
+        <div className="grid sm:grid-cols-[auto_1fr] gap-6 sm:gap-8 items-start">
+          <BreathOrb tone={risk.tone} className="w-24 sm:w-32 mx-auto sm:mx-0" />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <span className={cn("px-3 py-0.5 rounded-full text-sm font-medium", risk.chip)}>{risk.phrase}</span>
+              <span className="text-sm text-[var(--ink-4)]">{formatDate(r.analyzed_at)}</span>
+            </div>
+            <h1 className="mt-3 text-2xl sm:text-[2rem] leading-snug text-[var(--ink)]">
+              {r.executive_summary.headline_zh || "你的健康報告"}
+            </h1>
+            {r.claude_summary_zh && (
+              <p className="mt-3 text-[15px] sm:text-base text-[var(--ink-2)] max-w-[40em]">{r.claude_summary_zh}</p>
+            )}
+            {r.executive_summary.key_findings.length > 0 && (
+              <ul className="mt-5 grid sm:grid-cols-2 gap-x-6 gap-y-2">
+                {r.executive_summary.key_findings.map((f) => (
+                  <li key={f} className="flex gap-2 text-[15px] text-[var(--ink)]">
+                    <Check size={18} className="text-[var(--primary)] shrink-0 mt-[3px]" aria-hidden />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-5 pt-4 border-t border-[var(--line)] text-[15px] text-[var(--ink-2)]">
+              下一步：<span className="text-[var(--ink)] font-medium">{FOLLOW_UP[icaRisk.follow_up_priority]}</span>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {urgentAlerts.length > 0 && <RiskAlertBanner alerts={urgentAlerts} />}
+
+      {/* ── Tabs ── */}
+      <Tabs.Root value={tab} onValueChange={changeTab}>
+        <Tabs.List
+          aria-label="報告內容"
+          className="flex gap-1 p-1 rounded-full bg-[var(--wash-2)] w-full sm:w-max overflow-x-auto [scrollbar-width:none]"
+        >
+          <Tabs.Trigger value="overview" className={TAB_TRIGGER}>總覽</Tabs.Trigger>
+          {hasBodyData && <Tabs.Trigger value="body" className={TAB_TRIGGER}>身體數據</Tabs.Trigger>}
+          <Tabs.Trigger value="tcm" className={TAB_TRIGGER}>中醫調養</Tabs.Trigger>
+          <Tabs.Trigger value="ask" className={TAB_TRIGGER}>問 AI</Tabs.Trigger>
+        </Tabs.List>
+
+        {/* Overview: what to do next */}
+        <Tabs.Content value="overview" className="mt-6 space-y-8 focus-visible:outline-none">
+          <CompareWithLast sessionId={sessionId} />
+
+          <section>
+            <SectionTitle note="依照你的數據排出優先順序，先從第一項開始就好。">接下來兩週可以做的事</SectionTitle>
+            {r.data_driven_recommendations.length > 0 ? (
+              <ol className="space-y-3">
+                {r.data_driven_recommendations.map((item, i) => (
+                  <li key={`${item.title_zh}-${i}`}>
+                    <Card>
+                      <div className="flex items-start gap-4">
+                        <span className="grid place-items-center w-9 h-9 shrink-0 rounded-full bg-[var(--primary-wash)] text-[var(--primary)] font-display text-lg">
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-medium text-[var(--ink)]">{item.title_zh}</h3>
+                          <p className="text-[15px] text-[var(--ink-2)] mt-1">{item.why_zh}</p>
+                          {item.actions.length > 0 && (
+                            <ul className="mt-3 space-y-1.5">
+                              {item.actions.map((a) => (
+                                <li key={a} className="flex gap-2 text-[15px] text-[var(--ink)]">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--sage)] shrink-0 mt-[11px]" aria-hidden />
+                                  {a}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {item.target_metric && (
+                            <p className="mt-3 inline-block rounded-full bg-[var(--mist-wash)] px-3 py-1 text-sm text-[var(--mist)]">
+                              目標：{item.target_metric}
+                            </p>
+                          )}
+                          <CitationChips codes={item.citations} references={r.references} />
+                        </div>
+                      </div>
+                    </Card>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <Card><p className="text-[var(--ink-3)]">這次沒有特別需要調整的項目，維持目前的作息就好。</p></Card>
+            )}
+          </section>
+
+          <section>
+            <SectionTitle>心臟與自律神經的整體判讀</SectionTitle>
+            <Card>
+              <p className="text-[15px] text-[var(--ink)]">{icaRisk.primary_conclusion_zh}</p>
+              {icaRisk.red_flags.length > 0 && (
+                <ul className="mt-4 flex flex-wrap gap-2">
+                  {icaRisk.red_flags.map((f) => (
+                    <li key={f} className="rounded-full bg-red-50 text-red-800 px-3 py-1 text-sm">{f}</li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </section>
+
+          {r.risk_alerts.length > urgentAlerts.length && (
+            <section>
+              <SectionTitle>其他提醒</SectionTitle>
+              <RiskAlertBanner alerts={r.risk_alerts.filter((a) => !urgentAlerts.includes(a))} />
+            </section>
+          )}
+        </Tabs.Content>
+
+        {/* Body data (Western) */}
+        {hasBodyData && (
+          <Tabs.Content value="body" className="mt-6 space-y-8 focus-visible:outline-none">
+            {(r.metric_explanations?.length ?? 0) > 0 && (
+              <section>
+                <SectionTitle note="每個數字代表什麼、你落在哪裡，以及可以怎麼改善。">指標怎麼看</SectionTitle>
+                <MetricExplanationPanel items={r.metric_explanations ?? []} references={r.references} hrvReference={r.hrv_analysis?.reference_range} />
+              </section>
+            )}
+            {health?.hrv && health.hrv.sdnn > 0 && (
+              <section>
+                <SectionTitle note="數值越高，代表身體越能從壓力中恢復。">心率變異（HRV）</SectionTitle>
+                <HRVMetricsPanel hrv={health.hrv} analysis={r.hrv_analysis} />
+                {health.hrv.sdnn_series && health.hrv.sdnn_series.length > 1 && (
+                  <Card className="mt-4">
+                    <HRVTrendChart series={health.hrv.sdnn_series} reference={r.hrv_analysis?.reference_range} />
+                  </Card>
+                )}
+              </section>
+            )}
+            {health?.ecg_readings && health.ecg_readings.length > 0 && (
+              <section>
+                <SectionTitle>心電圖</SectionTitle>
+                <ECGSummaryPanel ecgReadings={health.ecg_readings} flags={r.western_flags} analysis={r.ecg_analysis} />
+              </section>
+            )}
+            {health?.sleep && health.sleep.length > 0 && (
+              <section>
+                <SectionTitle>睡眠</SectionTitle>
+                <SleepSummaryCard sleep={health.sleep} />
+              </section>
+            )}
+          </Tabs.Content>
+        )}
+
+        {/* TCM */}
+        <Tabs.Content value="tcm" className="mt-6 space-y-8 focus-visible:outline-none">
+          {r.primary_constitution && (
+            <section className="rounded-[24px] bg-[var(--sand-wash)] p-6 sm:p-7">
+              <p className="text-sm text-[var(--ink-3)]">目前比較接近</p>
+              <p className="mt-1 font-display text-3xl" style={{ color: constitutionColor(r.primary_constitution) }}>
+                {r.primary_constitution}
+              </p>
+              <p className="mt-2 text-[15px] text-[var(--ink-2)] max-w-[36em]">{constitutionDescription(r.primary_constitution)}</p>
+              <p className="mt-3 text-sm text-[var(--ink-3)]">這是調養方向的參考，不是診斷，狀態也會隨作息改變。</p>
+            </section>
+          )}
+
+          {questionnaire && (
+            <section>
+              <SectionTitle note="依你填寫的症狀計算，比例越高代表這個面向的不適越明顯。">症狀分布</SectionTitle>
+              <Card>
+                <div className="grid sm:grid-cols-2 gap-6 items-center">
+                  <SymptomRadarChart data={questionnaire} />
+                  <ul className="space-y-3">
+                    {SYMPTOM_GROUPS.map(({ key, label, max }) => {
+                      const score = Object.values(questionnaire[key] as unknown as Record<string, number>).reduce((a, v) => a + v, 0)
+                      const pct = Math.round((score / max) * 100)
+                      return (
+                        <li key={key}>
+                          <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-[var(--ink)]">{label}</span>
+                            <span className="text-[var(--ink-3)]">{pct}%</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-[var(--wash-2)] overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${pct}%`,
+                                backgroundColor: pct < 30 ? "var(--sage)" : pct < 60 ? "var(--honey)" : "var(--clay)",
+                              }}
+                            />
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              </Card>
+            </section>
+          )}
+
+          <section>
+            <SectionTitle note="從飲食、作息、穴位與情緒幾個方向，挑一兩項開始。">調養建議</SectionTitle>
+            <RecommendationList recommendations={r.recommendations} references={r.references} />
+          </section>
+        </Tabs.Content>
+
+        <Tabs.Content value="ask" className="mt-6 focus-visible:outline-none">
+          <SectionTitle note="AI 已經讀過這份報告。可以問某個數字的意思，或某個建議該怎麼做。">對報告有疑問？</SectionTitle>
+          <ChatPanel sessionId={sessionId} />
+        </Tabs.Content>
+      </Tabs.Root>
+
+      {r.references && Object.keys(r.references).length > 0 && <ReferencesPanel references={r.references} />}
+
+      {/* ── Actions ── */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:justify-end pt-6 border-t border-[var(--line)]">
+        <Button
+          variant="secondary"
+          onClick={() => printReport(r, health, sessionId, new Date().toLocaleDateString("zh-TW"), questionnaire)}
+        >
+          <Printer size={17} aria-hidden />
+          列印給醫師看
+        </Button>
+        {canRerun && (
+          <Button variant="secondary" onClick={onRerun}>
+            <RefreshCw size={17} aria-hidden />
+            重新產生報告
+          </Button>
+        )}
+        <Link href="/upload">
+          <Button className="w-full">開始新的檢視</Button>
+        </Link>
+      </div>
+    </div>
   )
 }
 
 export default function AnalysisPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Spinner size="lg" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><BreathOrb className="w-24" /></div>}>
       <AnalysisContent />
     </Suspense>
   )

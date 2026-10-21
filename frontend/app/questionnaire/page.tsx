@@ -1,158 +1,148 @@
 "use client"
 import { useSearchParams, useRouter } from "next/navigation"
-import { useEffect, useId, Suspense } from "react"
-import {
-  Activity,
-  ArrowRight,
-  Clock3,
-  HeartPulse,
-  MessageSquareText,
-  Moon,
-  Sparkles,
-  Stethoscope,
-} from "lucide-react"
+import { useEffect, Suspense } from "react"
 import { PageWrapper } from "@/components/layout/PageWrapper"
+import { PageHeader } from "@/components/layout/PageHeader"
+import { FlowSteps } from "@/components/flow/FlowSteps"
+import { SymptomTag } from "@/components/questionnaire/SymptomTag"
+import { SymptomRadarChart } from "@/components/charts/SymptomRadarChart"
 import { Button } from "@/components/ui/Button"
 import { Card } from "@/components/ui/Card"
-import { FadeIn } from "@/components/ui/FadeIn"
+import { cn } from "@/lib/utils"
 import { useQuestionnaire } from "@/hooks/useQuestionnaire"
-
-const EXAMPLES = [
-  "最近常常覺得疲勞，下午特別沒精神，手腳容易冰冷。",
-  "這兩週睡不著、半夜容易醒，多夢，早上起來還是很累。",
-  "飯後腹脹、胃酸逆流，壓力大時會胸悶和心悸。",
-]
-
-const PROMPT_POINTS = [
-  { icon: Activity, title: "身體感受", text: "疲勞、怕冷、冒汗、頭痛、胸悶、痠痛" },
-  { icon: Moon, title: "睡眠狀態", text: "入睡時間、半夜醒來、夢境、醒後恢復感" },
-  { icon: HeartPulse, title: "腸胃與情緒", text: "胃口、排便、腹脹、焦慮、煩躁、低落" },
-  { icon: Clock3, title: "時間與程度", text: "持續多久、一天何時最明顯、輕微或嚴重" },
-]
+import { QUESTIONNAIRE_SECTIONS as STEPS } from "@/lib/questionnaire"
+import type { SymptomSeverity } from "@/types/questionnaire"
 
 function QuestionnaireContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const sessionParam = searchParams.get("session")
-  const stableId = useId().replace(/[^a-zA-Z0-9]/g, "").slice(0, 8)
-  const sessionId = sessionParam ?? `pb_manual_${stableId}`
-
-  const { data, setNotes, submitting, submitted, error, submit } = useQuestionnaire(sessionId)
-  const text = data.additional_notes
-  const trimmed = text.trim()
-  const canSubmit = trimmed.length >= 6
+  const { step, setStep, data, setSeverity, setNotes, submitting, submittedId, error, submit } = useQuestionnaire(sessionParam)
 
   useEffect(() => {
-    if (submitted) router.push(`/analysis?session=${sessionId}`)
-  }, [submitted, sessionId, router])
+    if (submittedId) router.push(`/analysis?session=${submittedId}&start=1`)
+  }, [submittedId, router])
 
-  const appendExample = (example: string) => {
-    setNotes(trimmed ? `${trimmed}\n${example}` : example)
-  }
+  const currentStep = STEPS[step]
+  const isLast = step === STEPS.length - 1
+
+  // Total active symptoms count
+  const totalActive = STEPS.flatMap((s) =>
+    s.fields.map((f) => (data[s.id] as unknown as Record<string, number>)[f.key] ?? 0),
+  ).filter((v) => v > 0).length
 
   return (
     <PageWrapper maxWidth="lg">
-      <div className="space-y-6">
-        <FadeIn delay={0.05}>
-          <div className="space-y-2 text-center">
-            <p className="text-xs font-semibold uppercase text-[#0D7A66]">Symptom narrative</p>
-            <h1 className="text-3xl font-bold text-[var(--text-1)]">直接描述你的症狀</h1>
-            <p className="mx-auto max-w-2xl text-sm leading-6 text-[var(--text-2)]">
-              用自己的話寫下最近的身體狀態，系統會保留原文，並自動整理成分析報告可使用的症狀線索。
-            </p>
-          </div>
-        </FadeIn>
+      <FlowSteps current="feel" skipped={sessionParam ? [] : ["data"]} sessionId={sessionParam} />
+      <PageHeader
+        title="最近身體感覺如何？"
+        description="想想最近兩週。沒有感覺的就留在「無」，有的話選一個最接近的程度。"
+        aside={
+          totalActive > 0 && (
+            <span className="text-sm text-[var(--ink-3)]">已勾選 {totalActive} 項</span>
+          )
+        }
+      />
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <FadeIn delay={0.12}>
-            <Card className="space-y-5">
-              <div className="flex items-start gap-3 border-b border-[var(--border)] pb-4">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#E8F5F2] text-[#0D7A66]">
-                  <MessageSquareText className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-[var(--text-1)]">症狀描述</h2>
-                  <p className="mt-0.5 text-sm text-[var(--text-3)]">越具體越好，例如時間、頻率、嚴重度與誘發情境。</p>
-                </div>
-              </div>
-
-              <textarea
-                value={text}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={12}
-                placeholder="例如：最近兩週常常疲勞，下午特別沒精神，晚上睡不著且半夜會醒。飯後容易腹脹，壓力大時會胸悶和心悸..."
-                className="min-h-[280px] w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4 text-base leading-7 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:border-[#0D7A66] focus:outline-none focus:ring-2 focus:ring-[#0D7A66]/20"
-              />
-
-              <div className="flex flex-wrap gap-2">
-                {EXAMPLES.map((example) => (
-                  <button
-                    key={example}
-                    type="button"
-                    onClick={() => appendExample(example)}
-                    className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-left text-xs leading-5 text-[var(--text-2)] transition-colors hover:border-[#0D7A66]/40 hover:bg-[var(--surface-accent)]"
-                  >
-                    {example}
-                  </button>
-                ))}
-              </div>
-
-              {error && <p className="text-sm text-red-500">{error}</p>}
-
-              <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-[var(--text-3)]">
-                  {trimmed.length > 0 ? `${trimmed.length} 個字` : "尚未輸入症狀描述"}
-                </p>
-                <Button onClick={submit} loading={submitting} disabled={!canSubmit}>
-                  提交並分析
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </Card>
-          </FadeIn>
-
-          <FadeIn delay={0.18} from="right">
-            <div className="space-y-4 lg:sticky lg:top-24">
-              <Card className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-[#0D7A66]" />
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">描述重點</p>
-                </div>
-                <div className="grid gap-3">
-                  {PROMPT_POINTS.map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <div key={item.title} className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3">
-                        <div className="flex items-start gap-3">
-                          <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#0D7A66]" />
-                          <div>
-                            <p className="text-sm font-semibold text-[var(--text-1)]">{item.title}</p>
-                            <p className="mt-1 text-xs leading-5 text-[var(--text-2)]">{item.text}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </Card>
-
-              <Card className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Stethoscope className="h-4 w-4 text-[#0D7A66]" />
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">提交內容</p>
-                </div>
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-4">
-                  <p className="text-sm leading-6 text-[var(--text-2)]">
-                    {trimmed || "輸入後，這裡會保留你的原始描述，並送入後續 AI 報告。"}
-                  </p>
-                </div>
-                <p className="text-xs leading-5 text-[var(--text-3)]">
-                  會話 ID: <span className="font-mono">{sessionId}</span>
-                </p>
-              </Card>
-            </div>
-          </FadeIn>
+      {/* Category tabs — doubles as progress through the five pages */}
+      <div className="mt-6 -mx-4 px-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 w-max" role="tablist" aria-label="症狀分類">
+          {STEPS.map((s, i) => {
+            const catData = data[s.id] as unknown as Record<string, number>
+            const filled = Object.values(catData).filter((v) => v > 0).length
+            const active = i === step
+            return (
+              <button
+                key={s.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setStep(i)}
+                className={cn(
+                  "px-4 rounded-full text-[15px] border transition-colors gap-2",
+                  active
+                    ? "bg-[var(--primary)] border-[var(--primary)] text-[var(--surface)]"
+                    : "bg-[var(--surface)] border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--primary-line)]",
+                )}
+              >
+                {s.title}
+                {filled > 0 && (
+                  <span className={cn(
+                    "grid place-items-center min-w-5 h-5 px-1 rounded-full text-xs",
+                    active ? "bg-[var(--surface)]/25" : "bg-[var(--primary-wash)] text-[var(--primary)]",
+                  )}>
+                    {filled}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+        <div className="space-y-5">
+          <Card>
+            <h2 className="text-xl text-[var(--ink)]">{currentStep.title}</h2>
+            <p className="text-sm text-[var(--ink-3)] mt-0.5">{currentStep.description}</p>
+
+            <div className="mt-3 divide-y divide-[var(--line)]">
+              {currentStep.fields.map((field) => {
+                const catData = data[currentStep.id] as unknown as Record<string, SymptomSeverity>
+                return (
+                  <SymptomTag
+                    key={field.key}
+                    label={field.label}
+                    value={catData[field.key] as SymptomSeverity ?? 0}
+                    onChange={(v) => setSeverity(currentStep.id, field.key, v)}
+                  />
+                )
+              })}
+            </div>
+
+            {isLast && (
+              <div className="pt-5 mt-2 border-t border-[var(--line)]">
+                <label htmlFor="q-notes" className="block text-[15px] text-[var(--ink-2)] mb-2">還有想補充的嗎？（選填）</label>
+                <textarea
+                  id="q-notes"
+                  value={data.additional_notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="例如：最近工作壓力大、月經週期不規律、正在吃的藥…"
+                  rows={3}
+                  className="w-full rounded-2xl border px-4 py-3 text-[15px] placeholder:text-[var(--ink-4)] resize-none focus:outline-none focus:border-[var(--primary)]"
+                />
+              </div>
+            )}
+          </Card>
+
+          {error && (
+            <p role="alert" className="rounded-2xl bg-red-50 text-red-700 text-sm px-4 py-3">{error}</p>
+          )}
+
+          <div className="flex justify-between items-center gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => setStep(Math.max(0, step - 1))}
+              disabled={step === 0}
+            >
+              上一頁
+            </Button>
+            <span className="text-sm text-[var(--ink-4)]">{step + 1} / {STEPS.length}</span>
+            {!isLast ? (
+              <Button onClick={() => setStep(step + 1)}>下一頁</Button>
+            ) : (
+              <Button onClick={submit} loading={submitting}>完成，產生報告</Button>
+            )}
+          </div>
+        </div>
+
+        <aside className="lg:sticky lg:top-24">
+          <Card className="space-y-3">
+            <h2 className="text-lg text-[var(--ink)]">你的症狀分布</h2>
+            <p className="text-sm text-[var(--ink-3)]">邊填邊更新。越往外代表那個面向的不適越明顯。</p>
+            <SymptomRadarChart data={data} compact />
+          </Card>
+        </aside>
       </div>
     </PageWrapper>
   )
@@ -161,8 +151,8 @@ function QuestionnaireContent() {
 export default function QuestionnairePage() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center">
-        <span className="text-[var(--text-3)]">載入中...</span>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <span className="text-[var(--ink-4)]">載入中…</span>
       </div>
     }>
       <QuestionnaireContent />

@@ -48,14 +48,15 @@ class SleepSymptoms(BaseModel):
 
 
 class QuestionnaireResponse(BaseModel):
-    session_id: str
+    # Empty on first submit of a questionnaire-only check-in: the server creates the session.
+    session_id: str = ""
     submitted_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     energy: EnergySymptoms = Field(default_factory=EnergySymptoms)
     digestion: DigestionSymptoms = Field(default_factory=DigestionSymptoms)
     mood: MoodSymptoms = Field(default_factory=MoodSymptoms)
     pain: PainSymptoms = Field(default_factory=PainSymptoms)
     sleep: SleepSymptoms = Field(default_factory=SleepSymptoms)
-    additional_notes: str = ""
+    additional_notes: str = Field("", max_length=1000)
     # Optional ZYYXH/T157-2009 王琦 60-item scale answers (item_id → 1–5).
     # When present, the formal transformed-score scorer overrides symptom-based scoring.
     wangqi_answers: dict[str, int] = Field(default_factory=dict)

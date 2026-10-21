@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from "next"
-import Script from "next/script"
 import "./globals.css"
 import { Navbar } from "@/components/layout/Navbar"
 import { BottomNav } from "@/components/layout/BottomNav"
 import { FirebaseAnalytics } from "@/components/layout/FirebaseAnalytics"
 
 export const viewport: Viewport = {
-  themeColor: "#0D7A66",
+  themeColor: "#52705A",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -46,18 +45,24 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-TW" className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang="zh-TW" className="h-full" suppressHydrationWarning>
       <head>
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/* Root layout applies to every route; the pages/_document rule does not apply to app/. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+        />
+        <script
           // Inline, pre-hydration theme init to avoid light/dark flash.
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();`,
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-[var(--bg)] text-[var(--text-1)] antialiased">
+      <body className="min-h-full flex flex-col">
         <FirebaseAnalytics />
         <Navbar />
         <div className="flex-1 pb-16 md:pb-0">
