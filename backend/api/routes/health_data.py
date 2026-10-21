@@ -35,6 +35,35 @@ from models.health_data import (
 router = APIRouter(prefix="/health-data", tags=["health-data"])
 
 _MAX_CSV_BYTES = settings.max_csv_file_size_mb * 1024 * 1024
+_MAX_ECG_CSV_BYTES = 20 * 1024 * 1024
+_MAX_ECG_READINGS = 500        # recordings kept per session (classification + heart rate)
+_MAX_ECG_WAVEFORMS = 30        # newest recordings that keep their raw ~15k-sample waveform
+
+
+def _trim_waveforms(readings: list[dict]) -> list[dict]:
+    """
+    Keep raw voltages only for the newest recordings; for older ones, store the
+    heart rate derived from the waveform first so nothing the analysis uses is lost.
+    Keeps session payloads to a few MB even with hundreds of recordings.
+    """
+    ordered = sorted(readings, key=lambda r: str(r.get("timestamp", "")))
+    cutoff = len(ordered) - _MAX_ECG_WAVEFORMS
+    for i, r in enumerate(ordered):
+        volts = r.get("voltage_measurements") or []
+        if i >= cutoff or not volts:
+            continue
+        rate = int(r.get("sample_rate_hz") or 512)
+        if not r.get("average_heart_rate") and len(volts) >= rate:
+            _, hr = detect_r_peaks_and_hr(volts, rate)
+            if hr > 0:
+                r["average_heart_rate"] = round(float(hr), 1)
+        r["voltage_measurements"] = []
+    return ordered
+
+
+def _without_waveforms(health: dict) -> dict:
+    """Response copy for the browser: the preview needs counts, not ~15k samples per ECG."""
+    return {**health, "ecg_readings": [{**r, "voltage_measurements": []} for r in health.get("ecg_readings") or []]}
 
 class _XmlTooLarge(Exception):
     pass
@@ -151,8 +180,9 @@ async def upload_csv(
             if hrv_raw:
                 hrv_data = HRVMetrics(**hrv_raw)
 
-    # --- ECG list (cap at 50) ---
-    ecg_list = [ECGReading(**r) for r in ecg_records[:50]]
+    # --- ECG list: newest readings, same caps as the merge path ---
+    ecg_list = [ECGReading(**r) for r in _trim_waveforms(
+        [ECGReading(**r).model_dump() for r in ecg_records])[-_MAX_ECG_READINGS:]]
 
     # --- HRV from native ECG voltages (fallback when no dedicated HRV file) ---
     if hrv_data is None and ecg_list:
@@ -204,7 +234,7 @@ async def upload_csv(
         "status": "health_uploaded",
     })
 
-    return {"session_id": session_id, "session_token": new_token, "parsed": health_data.model_dump()}
+    return {"session_id": session_id, "session_token": new_token, "parsed": _without_waveforms(health_data.model_dump())}
 
 
 @router.post("/manual", dependencies=[Depends(LIMIT_CREATE)])
@@ -272,10 +302,6 @@ async def manual_input(
     if new_token:
         body["session_token"] = new_token
     return body
-
-
-_MAX_ECG_CSV_BYTES = 20 * 1024 * 1024
-_MAX_ECG_READINGS = 500
 
 
 @router.post("/add-ecg-csv")
@@ -348,7 +374,7 @@ def _merge_ecg_readings(existing: list[dict], new_records: list[dict]) -> tuple[
     for record in new_records:
         reading = ECGReading(**record).model_dump()
         by_key[key(reading)] = reading
-    merged = sorted(by_key.values(), key=lambda r: str(r.get("timestamp", "")))[-_MAX_ECG_READINGS:]
+    merged = _trim_waveforms(list(by_key.values()))[-_MAX_ECG_READINGS:]
     return max(0, len(by_key) - before), merged
 
 
