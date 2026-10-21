@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import type { HealthRecommendation } from "@/types/analysis"
-import { cn, categoryLabel } from "@/lib/utils"
+import { cn, categoryIcon, categoryLabel } from "@/lib/utils"
 import { RECOMMENDATION_CATEGORIES } from "@/lib/constants"
 import { CitationChips } from "@/components/analysis/CitationChips"
 
@@ -10,84 +10,82 @@ interface RecommendationListProps {
   references?: Record<string, string>
 }
 
+const ALL = "all"
+const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 } as const
+const BASIS = {
+  tcm:         { label: "中醫", cls: "bg-[var(--sand-wash)] text-[var(--sand-deep)]" },
+  western:     { label: "西醫", cls: "bg-[var(--mist-wash)] text-[var(--mist)]" },
+  integrative: { label: "中西整合", cls: "bg-[var(--primary-wash)] text-[var(--primary)]" },
+} as const
+
 export function RecommendationList({ recommendations, references }: RecommendationListProps) {
-  const [activeTab, setActiveTab] = useState("diet")
-
-  const byCat = RECOMMENDATION_CATEGORIES.reduce((acc, cat) => {
-    acc[cat] = recommendations.filter((r) => r.category === cat)
-    return acc
-  }, {} as Record<string, HealthRecommendation[]>)
-
-  const tabsWithData = RECOMMENDATION_CATEGORIES.filter((c) => byCat[c].length > 0)
+  const [picked, setPicked] = useState<string>(ALL)
 
   if (!recommendations.length) {
     return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-        <p className="text-gray-400 text-sm text-center py-8">暫無調養建議</p>
+      <div className="rounded-[20px] border border-[var(--line)] bg-[var(--surface)] p-6 text-[var(--ink-3)]">
+        這次沒有額外的調養建議。
       </div>
     )
   }
 
-  const active = activeTab as (typeof RECOMMENDATION_CATEGORIES)[number]
+  const cats = RECOMMENDATION_CATEGORIES.filter((c) => recommendations.some((r) => r.category === c))
+  const shown = [...recommendations]
+    .filter((r) => picked === ALL || r.category === picked)
+    .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-      <p className="text-xs text-gray-400 uppercase tracking-wider mb-4">調養建議</p>
+    <div className="space-y-4">
+      {cats.length > 1 && (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="依類別篩選">
+          {[ALL, ...cats].map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={picked === c}
+              onClick={() => setPicked(c)}
+              className={cn(
+                "px-4 rounded-full text-sm border transition-colors",
+                picked === c
+                  ? "bg-[var(--ink)] border-[var(--ink)] text-[var(--surface)]"
+                  : "bg-[var(--surface)] border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--line-2)]",
+              )}
+            >
+              {c === ALL ? "全部" : categoryLabel(c)}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        {tabsWithData.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setActiveTab(cat)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-all duration-200",
-              activeTab === cat
-                ? "bg-[#0D7A66] text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900",
-            )}
-          >
-            <span>{categoryLabel(cat)}</span>
-            <span className="text-xs opacity-70">({byCat[cat].length})</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div className="space-y-3">
-        {(byCat[active] ?? []).map((rec, i) => (
-          <div
-            key={i}
-            className="flex gap-4 p-4 rounded-xl bg-gray-50 border border-gray-200 hover:border-gray-300 transition-colors"
-          >
-            <div className="flex-shrink-0 mt-0.5">
-              <span
-                className={cn(
-                  "inline-block w-2 h-2 rounded-full mt-1",
-                  rec.priority === "high" ? "bg-red-500" :
-                  rec.priority === "medium" ? "bg-amber-500" :
-                  "bg-[#0D7A66]",
-                )}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <p className="text-sm font-medium text-gray-900">{rec.title_zh}</p>
-                <span className={cn(
-                  "text-xs px-1.5 py-0.5 rounded-md",
-                  rec.evidence_basis === "tcm" ? "bg-[#FEF3DC] text-[#855D16]" :
-                  rec.evidence_basis === "western" ? "bg-blue-50 text-blue-700" :
-                  "bg-[#E8F5F2] text-[#0D7A66]",
-                )}>
-                  {rec.evidence_basis === "tcm" ? "中醫" : rec.evidence_basis === "western" ? "西醫" : "整合"}
+      <ul className="grid sm:grid-cols-2 gap-3">
+        {shown.map((rec, i) => {
+          const basis = BASIS[rec.evidence_basis as keyof typeof BASIS] ?? BASIS.integrative
+          return (
+            <li key={`${rec.title_zh}-${i}`} className="rounded-[20px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-soft)]">
+              <div className="flex items-start gap-3">
+                <span
+                  className="grid place-items-center w-10 h-10 shrink-0 rounded-full bg-[var(--sand-wash)] text-[var(--sand-deep)] font-display text-lg"
+                  aria-hidden
+                >
+                  {categoryIcon(rec.category)}
                 </span>
+                <div className="min-w-0">
+                  <p className="text-sm text-[var(--ink-3)]">
+                    {categoryLabel(rec.category)}
+                    {rec.priority === "high" && <span className="ml-2 text-[var(--clay)]">優先</span>}
+                  </p>
+                  <h3 className="text-[17px] font-medium text-[var(--ink)]">{rec.title_zh}</h3>
+                </div>
               </div>
-              <p className="text-sm text-gray-500 leading-relaxed">{rec.content_zh}</p>
+              <p className="mt-3 text-[15px] text-[var(--ink-2)]">{rec.content_zh}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className={cn("px-2.5 py-0.5 rounded-full text-xs", basis.cls)}>{basis.label}</span>
+              </div>
               <CitationChips codes={rec.citations} references={references} />
-            </div>
-          </div>
-        ))}
-      </div>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }

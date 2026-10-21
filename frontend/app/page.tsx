@@ -1,172 +1,125 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { Button } from "@/components/ui/Button"
-import { Card } from "@/components/ui/Card"
-import { FadeIn, Stagger, StaggerItem } from "@/components/ui/FadeIn"
+import { BreathOrb } from "@/components/ui/BreathOrb"
 import { api } from "@/lib/api"
-import type { Session } from "@/types/analysis"
-import { formatDate, constitutionColor } from "@/lib/utils"
+import type { ConstitutionType, Session } from "@/types/analysis"
+import { constitutionColor, constitutionDescription } from "@/lib/utils"
+
+const STEPS = [
+  { title: "匯入資料", time: "約 2 分鐘", desc: "上傳 iPhone「健康」App 匯出的檔案，選擇要看的期間。沒有手錶也可以略過。" },
+  { title: "身體感受", time: "約 3 分鐘", desc: "最近容易累嗎？睡得好嗎？勾選這兩週真的有感覺的症狀就好。" },
+  { title: "你的報告", time: "約 1 分鐘", desc: "西醫的數據解讀和中醫的調養方向放在一起看，不懂的地方可以直接追問。" },
+]
+
+function greetingFor(hour: number) {
+  if (hour < 5) return "夜深了"
+  if (hour < 11) return "早安"
+  if (hour < 14) return "午安"
+  if (hour < 18) return "下午好"
+  return "晚安"
+}
+
+// Static export renders "你好" at build time; notify once after mount so the
+// store re-reads the visitor's local hour.
+const subscribeOnce = (notify: () => void) => {
+  const id = setTimeout(notify, 0)
+  return () => clearTimeout(id)
+}
 
 export default function Home() {
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [loading, setLoading] = useState(true)
+  const greeting = useSyncExternalStore(subscribeOnce, () => greetingFor(new Date().getHours()), () => "你好")
+  const [last, setLast] = useState<Session | null>(null)
 
   useEffect(() => {
     api.getSessions()
-      .then(setSessions)
+      .then((list) => setLast(list.find((s) => s.status === "completed") ?? null))
       .catch(() => {})
-      .finally(() => setLoading(false))
   }, [])
 
-  const hasHistory = !loading && sessions.length > 0
+  const lastType = last?.primary_constitution as ConstitutionType | undefined
 
   return (
-    <PageWrapper>
-      {/* ── Hero ── */}
-      <section className="py-10 sm:py-16 text-center space-y-5">
-        <FadeIn delay={0.05}>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E8F5F2] text-[#0D7A66] text-xs font-semibold mb-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#0D7A66] animate-pulse" />
-            中西醫整合 · AI 分析
-          </div>
-        </FadeIn>
-        <FadeIn delay={0.1}>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight">
-            <span className="text-gray-900">Pulse</span>
-            <span className="text-[#0D7A66]">Bridge</span>
+    <PageWrapper maxWidth="lg">
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section className="grid md:grid-cols-[1.15fr_1fr] items-center gap-6 md:gap-10 pt-2 md:pt-10 pb-12">
+        <div className="order-2 md:order-1">
+          <h1 className="text-[2.1rem] leading-[1.3] sm:text-5xl sm:leading-[1.3] text-[var(--ink)]">
+            {greeting}，<br />今天身體還好嗎？
           </h1>
-        </FadeIn>
-        <FadeIn delay={0.18}>
-          <p className="text-base sm:text-lg text-gray-500 max-w-xl mx-auto leading-relaxed px-2">
-            透過 Apple Watch 的 ECG、HRV 與睡眠數據，結合中醫體質辨識，
-            為您提供個人化健康建議
+          <p className="mt-5 max-w-[30em] text-base sm:text-[17px] text-[var(--ink-2)]">
+            用 Apple Watch 的心率變異、心電圖和睡眠紀錄，加上幾題身體感受，整理出一份西醫數據與中醫調養並列的報告。
           </p>
-        </FadeIn>
-        <FadeIn delay={0.26}>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Link href="/upload" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto min-w-[180px]">
-                上傳 Apple Watch 資料
-              </Button>
+          <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+            <Link href="/upload">
+              <Button size="lg" className="w-full sm:w-auto">開始今天的檢視</Button>
             </Link>
-            <Link href="/questionnaire" className="w-full sm:w-auto">
-              <Button size="lg" variant="secondary" className="w-full sm:w-auto min-w-[160px]">
-                直接填寫問卷
-              </Button>
+            <Link
+              href="/questionnaire"
+              className="justify-center text-[15px] text-[var(--primary)] underline decoration-[var(--primary-line)] underline-offset-[6px] hover:decoration-[var(--primary)]"
+            >
+              沒有 Apple Watch？從問卷開始
             </Link>
           </div>
-        </FadeIn>
+        </div>
+
+        <figure className="order-1 md:order-2 flex flex-col items-center">
+          <BreathOrb guide className="w-36 sm:w-56 md:w-72" />
+          <figcaption className="mt-3 text-center text-sm text-[var(--ink-3)] max-w-[19em]">
+            開始之前，跟著圓圈慢慢呼吸三次。放慢吐氣，心率變異會跟著升高。
+          </figcaption>
+        </figure>
       </section>
 
-      {/* ── Features ── */}
-      <Stagger className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-12" delay={0.05}>
-        {[
-          {
-            title: "ECG 心電圖分析",
-            desc: "偵測心房顫動、ST 段異常等心臟風險指標",
-            color: "#0D7A66",
-            bg: "#E8F5F2",
-          },
-          {
-            title: "HRV 自律神經評估",
-            desc: "計算 SDNN、RMSSD，評估自律神經功能與壓力",
-            color: "#2563eb",
-            bg: "#EFF6FF",
-          },
-          {
-            title: "中醫體質辨識",
-            desc: "九種體質分類，結合問卷提供中西醫整合建議",
-            color: "#855D16",
-            bg: "#FEF3DC",
-          },
-        ].map((f) => (
-          <StaggerItem key={f.title}>
-            <Card className="space-y-2 hover:shadow-md transition-shadow duration-200 h-full">
-              <div
-                className="inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold"
-                style={{ backgroundColor: f.bg, color: f.color }}
-              >
-                {f.title}
-              </div>
-              <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
-            </Card>
-          </StaggerItem>
-        ))}
-      </Stagger>
-
-      {/* ── Recent sessions ── */}
-      {hasHistory && (
-        <section className="mb-12">
-          <FadeIn>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-gray-900">最近分析紀錄</h2>
-              <Link href="/history" className="text-sm text-[#0D7A66] hover:text-[#1A9479]">
-                查看全部 →
-              </Link>
+      {/* ── Last report ──────────────────────────────────────── */}
+      {last && (
+        <section aria-labelledby="last-heading" className="mb-12">
+          <div className="rounded-[20px] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-soft)] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <h2 id="last-heading" className="flex gap-3 text-sm text-[var(--ink-3)]" style={{ fontFamily: "var(--font-zh)" }}>
+                <span>上次的報告</span>
+                <span>{new Date(last.created_at).toLocaleDateString("zh-TW", { month: "long", day: "numeric" })}</span>
+              </h2>
+              {lastType ? (
+                <>
+                  <p className="mt-1 font-display text-2xl" style={{ color: constitutionColor(lastType) }}>{lastType}</p>
+                  <p className="mt-1 text-[15px] text-[var(--ink-2)]">{constitutionDescription(lastType)}</p>
+                </>
+              ) : (
+                <p className="mt-1 font-display text-2xl text-[var(--ink)]">報告已完成</p>
+              )}
             </div>
-          </FadeIn>
-          <Stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" stagger={0.07}>
-            {sessions.slice(0, 3).map((s) => (
-              <StaggerItem key={s.session_id}>
-                <Link href={`/analysis?session=${s.session_id}`}>
-                  <Card className="hover:shadow-md transition-all duration-200 cursor-pointer space-y-3 h-full">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400 font-mono truncate">{s.session_id.slice(0, 16)}…</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
-                        s.status === "completed" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                      }`}>
-                        {s.status === "completed" ? "已完成" : s.status}
-                      </span>
-                    </div>
-                    {s.primary_constitution && (
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: constitutionColor(s.primary_constitution as Parameters<typeof constitutionColor>[0]) }}
-                        />
-                        <span
-                          className="font-semibold text-sm"
-                          style={{ color: constitutionColor(s.primary_constitution as Parameters<typeof constitutionColor>[0]) }}
-                        >
-                          {s.primary_constitution}
-                        </span>
-                      </div>
-                    )}
-                    <p className="text-xs text-gray-400">{formatDate(s.created_at)}</p>
-                  </Card>
-                </Link>
-              </StaggerItem>
-            ))}
-          </Stagger>
+            <Link href={`/analysis?session=${last.session_id}`} className="shrink-0">
+              <Button variant="secondary" className="w-full sm:w-auto">打開報告</Button>
+            </Link>
+          </div>
         </section>
       )}
 
-      {/* ── How it works ── */}
-      <FadeIn>
-        <section className="mb-8">
-          <h2 className="text-base font-semibold text-gray-900 text-center mb-6">使用流程</h2>
-          <Stagger className="grid grid-cols-2 sm:grid-cols-4 gap-4" stagger={0.09}>
-            {[
-              { step: "01", title: "匯出健康資料", desc: "從 iPhone 健康 App 匯出 XML" },
-              { step: "02", title: "填寫症狀問卷", desc: "記錄能量、消化、睡眠等症狀" },
-              { step: "03", title: "AI 整合分析", desc: "Claude AI 結合中西醫知識" },
-              { step: "04", title: "獲得個人化建議", desc: "體質分析、風險提醒" },
-            ].map((item) => (
-              <StaggerItem key={item.step} from="up">
-                <div className="text-center space-y-2">
-                  <span className="inline-block text-xs text-[#0D7A66] font-mono font-bold bg-[#E8F5F2] px-3 py-1 rounded-full">
-                    {item.step}
-                  </span>
-                  <h3 className="text-sm font-semibold text-gray-900">{item.title}</h3>
-                  <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
-                </div>
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </section>
-      </FadeIn>
+      {/* ── The three steps ──────────────────────────────────── */}
+      <section aria-labelledby="steps-heading" className="mb-12">
+        <h2 id="steps-heading" className="text-2xl text-[var(--ink)]">一次檢視，三個步驟</h2>
+        <ol className="mt-5 grid md:grid-cols-3 gap-3 md:gap-4">
+          {STEPS.map((s, i) => (
+            <li key={s.title} className="rounded-[20px] bg-[var(--surface)] border border-[var(--line)] p-5">
+              <div className="flex items-center gap-3">
+                <span className="grid place-items-center w-8 h-8 rounded-full bg-[var(--primary-wash)] text-[var(--primary)] font-display">
+                  {i + 1}
+                </span>
+                <h3 className="text-base font-medium text-[var(--ink)]">{s.title}</h3>
+                <span className="ml-auto text-sm text-[var(--ink-4)]">{s.time}</span>
+              </div>
+              <p className="mt-3 text-[15px] text-[var(--ink-2)]">{s.desc}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <p className="mb-8 rounded-2xl bg-[var(--sand-wash)] px-5 py-4 text-sm text-[var(--ink-2)]">
+        脈橋提供健康資訊參考，不能取代醫師診斷。若出現胸痛、昏厥、呼吸困難等症狀，請直接就醫或撥打 119。
+      </p>
     </PageWrapper>
   )
 }

@@ -26,12 +26,6 @@ function toPercent(score: number, max: number): number {
   return Math.round((score / max) * 100)
 }
 
-const SEVERITY_GRADIENT = [
-  { offset: "0%", color: "#0D7A66" },
-  { offset: "60%", color: "#F59E0B" },
-  { offset: "100%", color: "#DC2626" },
-]
-
 export function SymptomRadarChart({ data, compact = false }: Props) {
   const chartData = [
     {
@@ -72,12 +66,12 @@ export function SymptomRadarChart({ data, compact = false }: Props) {
         <RadarChart data={chartData} margin={{ top: 8, right: 28, bottom: 8, left: 28 }}>
           <defs>
             <radialGradient id="symptomFill" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#DC2626" stopOpacity={0.35} />
-              <stop offset="100%" stopColor="#DC2626" stopOpacity={0.05} />
+              <stop offset="0%" stopColor="var(--brick)" stopOpacity={0.35} />
+              <stop offset="100%" stopColor="var(--brick)" stopOpacity={0.05} />
             </radialGradient>
           </defs>
           <PolarGrid
-            stroke="#E5E7EB"
+            stroke="var(--line)"
             strokeDasharray="3 3"
           />
           <PolarAngleAxis
@@ -85,31 +79,31 @@ export function SymptomRadarChart({ data, compact = false }: Props) {
             tick={{
               fontSize: compact ? 11 : 12,
               fontWeight: 600,
-              fill: "#374151",
+              fill: "var(--ink-700)",
             }}
           />
           <PolarRadiusAxis
             angle={90}
             domain={[0, 100]}
-            tick={{ fontSize: 9, fill: "#9CA3AF" }}
+            tick={{ fontSize: 9, fill: "var(--ink-4)" }}
             tickCount={4}
             axisLine={false}
           />
           <Radar
             name="症狀嚴重度"
             dataKey="value"
-            stroke="#DC2626"
+            stroke="var(--brick)"
             strokeWidth={2}
             fill="url(#symptomFill)"
-            dot={{ fill: "#DC2626", strokeWidth: 0, r: 3 }}
+            dot={{ fill: "var(--brick)", strokeWidth: 0, r: 3 }}
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "#fff",
-              border: "1px solid #E5E7EB",
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--line)",
               borderRadius: 12,
               fontSize: 12,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              boxShadow: "var(--shadow-soft)",
             }}
             formatter={(v: unknown, name: unknown) => [
               `${v}%`,
@@ -130,14 +124,14 @@ export function SymptomRadarChart({ data, compact = false }: Props) {
                 style={{
                   width: `${d.value}%`,
                   backgroundColor:
-                    d.value === 0 ? "#D1D5DB"
-                    : d.value < 30 ? "#0D7A66"
-                    : d.value < 60 ? "#F59E0B"
-                    : "#DC2626",
+                    d.value === 0 ? "var(--line-2)"
+                    : d.value < 30 ? "var(--primary)"
+                    : d.value < 60 ? "var(--honey)"
+                    : "var(--brick)",
                 }}
               />
             </div>
-            <span className="text-xs font-mono text-gray-400 w-8 shrink-0">{d.value}%</span>
+            <span className="text-xs text-gray-400 w-8 shrink-0">{d.value}%</span>
           </div>
         ))}
       </div>

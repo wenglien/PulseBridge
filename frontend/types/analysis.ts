@@ -189,10 +189,23 @@ export interface AnalysisResult {
   error_message?: string
 }
 
+/** Headline numbers the backend keeps per session (absent when not measured). */
+export interface SessionMetrics {
+  sdnn?: number
+  rmssd?: number
+  resting_hr?: number
+  sleep_minutes?: number
+  ecg_count?: number
+  symptom_load?: number
+  risk?: RiskLevel
+}
+
 export interface Session {
   session_id: string
   created_at: string
   updated_at: string
   status: string
   primary_constitution: string
+  source?: string
+  metrics?: SessionMetrics
 }
