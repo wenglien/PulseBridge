@@ -26,7 +26,10 @@ class User(Base):
 class Session(Base):
     __tablename__ = "sessions"
 
-    id = Column(String(32), primary_key=True)               # pb_YYYYMMDD_xxxxxx
+    id = Column(String(32), primary_key=True)               # pb_YYYYMMDD_<16 hex>
+    token_hash = Column(String(64), nullable=True)          # sha256 of the access token; NULL = legacy
+    progress = Column(Float, default=0.0)                   # XML extract progress in [0, 1]
+    metrics_json = Column(Text, nullable=True)              # headline numbers for history/trends
     user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     status = Column(String(32), default="pending")
     primary_constitution = Column(String(32), nullable=True)
