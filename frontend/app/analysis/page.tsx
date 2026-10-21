@@ -44,14 +44,6 @@ const RISK: Record<RiskLevel, { phrase: string; tone: "calm" | "caution" | "urge
   critical: { phrase: "請盡快就醫",       tone: "urgent",  chip: "bg-red-100 text-red-800" },
 }
 
-const SYMPTOM_GROUPS = [
-  { key: "energy",    label: "能量與疲勞", max: 18 },
-  { key: "digestion", label: "消化系統",   max: 18 },
-  { key: "mood",      label: "情緒狀態",   max: 15 },
-  { key: "pain",      label: "疼痛症狀",   max: 15 },
-  { key: "sleep",     label: "睡眠品質",   max: 12 },
-] as const
-
 const TAB_TRIGGER =
   "px-4 sm:px-5 rounded-full text-[15px] text-[var(--ink-3)] whitespace-nowrap transition-colors " +
   "hover:text-[var(--ink)] data-[state=active]:bg-[var(--surface)] data-[state=active]:text-[var(--ink)] " +
@@ -367,32 +359,8 @@ function Report({
             <section>
               <SectionTitle note="依你填寫的症狀計算，比例越高代表這個面向的不適越明顯。">症狀分布</SectionTitle>
               <Card>
-                <div className="grid sm:grid-cols-2 gap-6 items-center">
-                  <SymptomRadarChart data={questionnaire} />
-                  <ul className="space-y-3">
-                    {SYMPTOM_GROUPS.map(({ key, label, max }) => {
-                      const score = Object.values(questionnaire[key] as unknown as Record<string, number>).reduce((a, v) => a + v, 0)
-                      const pct = Math.round((score / max) * 100)
-                      return (
-                        <li key={key}>
-                          <div className="flex items-center justify-between text-sm mb-1">
-                            <span className="text-[var(--ink)]">{label}</span>
-                            <span className="text-[var(--ink-3)]">{pct}%</span>
-                          </div>
-                          <div className="h-2 rounded-full bg-[var(--wash-2)] overflow-hidden">
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: `${pct}%`,
-                                backgroundColor: pct < 30 ? "var(--sage)" : pct < 60 ? "var(--honey)" : "var(--clay)",
-                              }}
-                            />
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
+                {/* The chart renders its own per-area bars next to the radar. */}
+                <SymptomRadarChart data={questionnaire} />
               </Card>
             </section>
           )}
