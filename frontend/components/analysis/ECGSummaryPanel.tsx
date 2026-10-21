@@ -22,12 +22,12 @@ export function ECGSummaryPanel({ ecgReadings, flags, analysis }: ECGSummaryPane
   const qualityPct  = Math.round((quality?.quality_score ?? 1) * 100)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-6">
+    <div className="rounded-[20px] border border-[var(--line)] bg-[var(--surface)] p-5 sm:p-6 shadow-[var(--shadow-soft)] space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-xs text-gray-400 uppercase tracking-wider">ECG 深度分析</p>
+        <p className="text-xs text-gray-400">ECG 深度分析</p>
         {risk && (
           <span className={`text-xs font-bold px-2.5 py-1 rounded-full border uppercase ${
-            risk.risk_level === "low"    ? "bg-[#E8F5F2] text-[#0D7A66] border-[#9FD1C8]"
+            risk.risk_level === "low"    ? "bg-[var(--primary-wash)] text-[var(--primary)] border-[var(--primary-line)]"
           : risk.risk_level === "medium" ? "bg-yellow-50 text-yellow-700 border-yellow-200"
           : "bg-red-50 text-red-700 border-red-200"
           }`}>
@@ -73,11 +73,11 @@ export function ECGSummaryPanel({ ecgReadings, flags, analysis }: ECGSummaryPane
             className="h-full rounded-full transition-all duration-700"
             style={{
               width: `${qualityPct}%`,
-              backgroundColor: qualityPct >= 80 ? "#0D7A66" : qualityPct >= 60 ? "#F59E0B" : "#DC2626",
+              backgroundColor: qualityPct >= 80 ? "var(--primary)" : qualityPct >= 60 ? "var(--honey)" : "var(--brick)",
             }}
           />
         </div>
-        <div className="flex justify-between text-[10px] text-gray-400">
+        <div className="flex justify-between text-xs text-gray-400">
           <span>可用 {quality?.usable_readings ?? "—"} 筆</span>
           <span>不可用 {quality?.inconclusive_readings ?? "—"} 筆</span>
         </div>
@@ -116,7 +116,7 @@ export function ECGSummaryPanel({ ecgReadings, flags, analysis }: ECGSummaryPane
           <p className="text-xs text-gray-400 mb-2">ECG 證據摘要</p>
           <div className="flex flex-wrap gap-2">
             {risk.evidence.map((item) => (
-              <span key={item} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-600 border border-gray-200">
+              <span key={item} className="text-xs px-2 py-1 rounded-full bg-[var(--wash)] text-[var(--ink-2)]">
                 {item}
               </span>
             ))}
@@ -142,8 +142,8 @@ function StatTile({
   }
   return (
     <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
-      <p className={cn("text-xl font-bold", colorMap[color])}>{value}</p>
-      {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
+      <p className={cn("font-display text-xl", colorMap[color])}>{value}</p>
+      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
       <p className="text-xs text-gray-400 mt-1">{label}</p>
     </div>
   )

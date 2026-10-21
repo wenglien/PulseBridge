@@ -8,11 +8,11 @@ interface SleepSummaryCardProps {
 }
 
 const SLEEP_COLORS: Record<string, string> = {
-  deep: "#6B4E9B",
-  rem: "#0D7A66",
-  core: "#2563eb",
-  awake: "#9ca3af",
-  asleep: "#4ade80",
+  deep: "var(--mist)",
+  rem: "var(--sage)",
+  core: "var(--sand)",
+  awake: "var(--line-2)",
+  asleep: "var(--sage)",
 }
 
 const SLEEP_LABELS: Record<string, string> = {
@@ -22,8 +22,8 @@ const SLEEP_LABELS: Record<string, string> = {
 export function SleepSummaryCard({ sleep }: SleepSummaryCardProps) {
   if (!sleep.length) {
     return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-        <p className="text-xs text-gray-400 uppercase tracking-wider mb-4">睡眠分析</p>
+      <div className="rounded-[20px] border border-[var(--line)] bg-[var(--surface)] p-5 sm:p-6 shadow-[var(--shadow-soft)]">
+        <p className="text-xs text-gray-400 mb-4">睡眠分析</p>
         <p className="text-gray-400 text-sm text-center py-8">無睡眠數據</p>
       </div>
     )
@@ -46,8 +46,8 @@ export function SleepSummaryCard({ sleep }: SleepSummaryCardProps) {
   ].filter((d) => d.value > 0)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-      <p className="text-xs text-gray-400 uppercase tracking-wider mb-4">
+    <div className="rounded-[20px] border border-[var(--line)] bg-[var(--surface)] p-5 sm:p-6 shadow-[var(--shadow-soft)]">
+      <p className="text-xs text-gray-400 mb-4">
         睡眠分析（近 {sleep.length} 晚平均）
       </p>
 
@@ -66,15 +66,15 @@ export function SleepSummaryCard({ sleep }: SleepSummaryCardProps) {
                 strokeWidth={0}
               >
                 {pieData.map((entry) => (
-                  <Cell key={entry.name} fill={SLEEP_COLORS[entry.name] ?? "#9ca3af"} />
+                  <Cell key={entry.name} fill={SLEEP_COLORS[entry.name] ?? "var(--ink-4)"} />
                 ))}
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#ffffff",
-                  border: "1px solid #e5e7eb",
+                  backgroundColor: "var(--surface)",
+                  border: "1px solid var(--line)",
                   borderRadius: "12px",
-                  color: "#111827",
+                  color: "var(--ink)",
                   fontSize: "12px",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                 }}
@@ -87,7 +87,7 @@ export function SleepSummaryCard({ sleep }: SleepSummaryCardProps) {
         {/* Stats */}
         <div className="flex-1 space-y-3 w-full">
           <div className="text-center sm:text-left">
-            <p className="text-3xl font-bold text-gray-900">{minutesToHM(avg.total)}</p>
+            <p className="font-display text-3xl text-gray-900">{minutesToHM(avg.total)}</p>
             <p className="text-sm text-gray-400">平均睡眠時間</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -95,7 +95,7 @@ export function SleepSummaryCard({ sleep }: SleepSummaryCardProps) {
               <div key={d.name} className="flex items-center gap-2">
                 <span
                   className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: SLEEP_COLORS[d.name] ?? "#9ca3af" }}
+                  style={{ backgroundColor: SLEEP_COLORS[d.name] ?? "var(--ink-4)" }}
                 />
                 <div className="min-w-0">
                   <p className="text-xs text-gray-400">{SLEEP_LABELS[d.name]}</p>

@@ -19,25 +19,25 @@ export function DataPreview({ health }: DataPreviewProps) {
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-500 text-sm">解析完成！以下是從您的 Apple Watch 提取的健康數據：</p>
+      
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: "ECG 記錄", value: `${health.ecg_readings.length} 筆` },
-          { label: "HRV SDNN", value: hrv ? `${hrv.sdnn.toFixed(0)} ms` : "N/A" },
-          { label: "平均睡眠", value: avgSleep > 0 ? minutesToHM(avgSleep) : "N/A" },
-          { label: "靜息心率", value: health.resting_heart_rate > 0 ? `${health.resting_heart_rate.toFixed(0)} bpm` : "N/A" },
+          { label: "HRV SDNN", value: hrv ? `${hrv.sdnn.toFixed(0)} ms` : "—" },
+          { label: "平均睡眠", value: avgSleep > 0 ? minutesToHM(avgSleep) : "—" },
+          { label: "靜息心率", value: health.resting_heart_rate > 0 ? `${health.resting_heart_rate.toFixed(0)} bpm` : "—" },
         ].map((item) => (
-          <div key={item.label} className="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
-            <div className="text-lg font-bold text-gray-900">{item.value}</div>
+          <div key={item.label} className="bg-[var(--surface)] border border-gray-200 rounded-2xl p-4 text-center">
+            <div className="font-display text-lg text-gray-900">{item.value}</div>
             <div className="text-xs text-gray-400 mt-0.5">{item.label}</div>
           </div>
         ))}
       </div>
 
       {Object.keys(ecgClassifications).length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <p className="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wider">ECG 分類結果</p>
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <p className="text-xs text-gray-400 mb-3 font-medium">ECG 分類結果</p>
           <div className="space-y-2">
             {Object.entries(ecgClassifications).map(([cls, count]) => (
               <div key={cls} className="flex justify-between items-center">
@@ -54,8 +54,8 @@ export function DataPreview({ health }: DataPreviewProps) {
       )}
 
       {hrv && hrv.sdnn > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <p className="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wider">HRV 指標</p>
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <p className="text-xs text-gray-400 mb-3 font-medium">HRV 指標</p>
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: "SDNN", value: `${hrv.sdnn.toFixed(1)} ms` },
@@ -63,7 +63,7 @@ export function DataPreview({ health }: DataPreviewProps) {
               { label: "LF/HF", value: hrv.lf_hf_ratio.toFixed(2) },
             ].map((m) => (
               <div key={m.label} className="text-center">
-                <div className="text-lg font-bold text-[#0D7A66]">{m.value}</div>
+                <div className="font-display text-lg text-[var(--primary)]">{m.value}</div>
                 <div className="text-xs text-gray-400">{m.label}</div>
               </div>
             ))}

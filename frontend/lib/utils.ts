@@ -25,34 +25,34 @@ export function minutesToHM(minutes: number): string {
 
 export function riskLevelColor(level: RiskLevel): string {
   return {
-    critical: "text-red-400 bg-red-400/10 border-red-400/30",
-    high: "text-orange-400 bg-orange-400/10 border-orange-400/30",
-    medium: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
-    low: "text-green-400 bg-green-400/10 border-green-400/30",
+    critical: "text-red-700 bg-red-50 border-red-300",
+    high: "text-orange-700 bg-orange-50 border-orange-300",
+    medium: "text-amber-700 bg-amber-50 border-amber-300",
+    low: "text-green-700 bg-green-50 border-green-300",
   }[level]
 }
 
 export function riskLevelDot(level: RiskLevel): string {
   return {
-    critical: "bg-red-400",
-    high: "bg-orange-400",
-    medium: "bg-yellow-400",
-    low: "bg-green-400",
+    critical: "bg-red-500",
+    high: "bg-orange-500",
+    medium: "bg-amber-500",
+    low: "bg-green-500",
   }[level]
 }
 
 export function constitutionColor(type: ConstitutionType): string {
   return {
-    "平和質": "#16a34a",
-    "氣虛質": "#d97706",
-    "陽虛質": "#2563eb",
-    "陰虛質": "#dc2626",
-    "痰濕質": "#7c3aed",
-    "濕熱質": "#ea580c",
-    "血瘀質": "#9f1239",
-    "氣鬱質": "#0891b2",
-    "特稟質": "#c2410c",
-  }[type] ?? "#6b7280"
+    "平和質": "#4E7356",
+    "氣虛質": "#B98325",
+    "陽虛質": "#557A93",
+    "陰虛質": "#AE4237",
+    "痰濕質": "#7A6A92",
+    "濕熱質": "#B3613F",
+    "血瘀質": "#8C4A5C",
+    "氣鬱質": "#4F8584",
+    "特稟質": "#9A7B4B",
+  }[type] ?? "#6E6C63"
 }
 
 export function constitutionDescription(type: ConstitutionType): string {

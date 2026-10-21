@@ -5,7 +5,7 @@ import { BottomNav } from "@/components/layout/BottomNav"
 import { FirebaseAnalytics } from "@/components/layout/FirebaseAnalytics"
 
 export const viewport: Viewport = {
-  themeColor: "#0D7A66",
+  themeColor: "#52705A",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -45,8 +45,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-TW" className="h-full">
+    <html lang="zh-TW" className="h-full" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/* Root layout applies to every route; the pages/_document rule does not apply to app/. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+        />
         <script
           // Inline, pre-hydration theme init to avoid light/dark flash.
           dangerouslySetInnerHTML={{
@@ -54,7 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-[var(--bg)] text-[var(--text-1)] antialiased">
+      <body className="min-h-full flex flex-col">
         <FirebaseAnalytics />
         <Navbar />
         <div className="flex-1 pb-16 md:pb-0">

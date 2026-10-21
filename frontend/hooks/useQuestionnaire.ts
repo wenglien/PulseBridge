@@ -4,13 +4,14 @@ import { api } from "@/lib/api"
 import type { QuestionnaireResponse, SymptomSeverity } from "@/types/questionnaire"
 import { EMPTY_QUESTIONNAIRE } from "@/types/questionnaire"
 
-export function useQuestionnaire(sessionId: string) {
+/** `sessionId` is null for a questionnaire-only check-in: the server creates the session on submit. */
+export function useQuestionnaire(sessionId: string | null) {
   const [step, setStep] = useState(0)
   const [data, setData] = useState<Omit<QuestionnaireResponse, "session_id">>({
     ...EMPTY_QUESTIONNAIRE,
   })
   const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [submittedId, setSubmittedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const setSeverity = useCallback(
@@ -35,8 +36,8 @@ export function useQuestionnaire(sessionId: string) {
     setSubmitting(true)
     setError(null)
     try {
-      await api.submitQuestionnaire({ ...data, session_id: sessionId })
-      setSubmitted(true)
+      const res = await api.submitQuestionnaire({ ...data, session_id: sessionId ?? "" })
+      setSubmittedId(res.session_id)
     } catch (e) {
       setError(e instanceof Error ? e.message : "提交失敗")
     } finally {
@@ -47,6 +48,6 @@ export function useQuestionnaire(sessionId: string) {
   return {
     step, setStep,
     data, setSeverity, setNotes,
-    submitting, submitted, error, submit,
+    submitting, submittedId, error, submit,
   }
 }

@@ -1,8 +1,12 @@
 "use client"
-import { useEffect, useRef, useState } from "react"
-import { Spinner } from "@/components/ui/Spinner"
+import { useEffect, useState } from "react"
+import { Check } from "lucide-react"
+import { BreathOrb } from "@/components/ui/BreathOrb"
+import { cn } from "@/lib/utils"
 import type { AnalysisResult } from "@/types/analysis"
 import { api } from "@/lib/api"
+
+const STAGES = ["讀取你的數據", "比對參考範圍與安全規則", "整理西醫與中醫的觀點", "完成"]
 
 interface StreamingAnalysisProps {
   sessionId: string
@@ -11,87 +15,96 @@ interface StreamingAnalysisProps {
 }
 
 export function StreamingAnalysis({ sessionId, onComplete, onError }: StreamingAnalysisProps) {
-  const [text, setText] = useState("")
+  const [received, setReceived] = useState(0)
   const [phase, setPhase] = useState<"connecting" | "streaming" | "done">("connecting")
-  const textRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const url = api.getAnalysisStreamUrl(sessionId)
-    const es = new EventSource(url)
+    const controller = new AbortController()
+    let settled = false
+    const fail = (msg: string) => {
+      if (settled || controller.signal.aborted) return
+      settled = true
+      onError(msg)
+    }
 
-    es.onopen = () => setPhase("streaming")
+    const handle = (data: { error?: string; done?: boolean; result?: AnalysisResult; chunk?: string }) => {
+      if (data.error) return fail(data.error)
+      if (data.done && data.result) {
+        settled = true
+        setPhase("done")
+        onComplete(data.result)
+        return
+      }
+      if (data.chunk) setReceived((n) => n + data.chunk!.length)
+    }
 
-    es.onmessage = (e) => {
+    ;(async () => {
       try {
-        const data = JSON.parse(e.data)
-        if (data.error) {
-          onError(data.error)
-          es.close()
-          return
+        const res = await api.streamAnalysis(sessionId, controller.signal)
+        if (!res.ok || !res.body) {
+          const err = await res.json().catch(() => null) as { detail?: string } | null
+          return fail(err?.detail ?? "無法開始分析，請稍後再試")
         }
-        if (data.done && data.result) {
-          setPhase("done")
-          onComplete(data.result as AnalysisResult)
-          es.close()
-          return
+        setPhase("streaming")
+        const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
+        let buffer = ""
+        for (;;) {
+          const { value, done } = await reader.read()
+          if (done) break
+          buffer += value
+          // SSE events are separated by a blank line; keep any partial event in the buffer.
+          const events = buffer.split("\n\n")
+          buffer = events.pop() ?? ""
+          for (const ev of events) {
+            const line = ev.split("\n").find((l) => l.startsWith("data: "))
+            if (!line) continue
+            try {
+              handle(JSON.parse(line.slice(6)))
+            } catch {
+              // ignore a malformed event
+            }
+          }
         }
-        if (data.chunk) {
-          setText((prev) => prev + data.chunk)
-          setTimeout(() => {
-            textRef.current?.scrollTo({ top: textRef.current.scrollHeight, behavior: "smooth" })
-          }, 50)
-        }
+        if (!settled) fail("分析連線中斷，請再試一次")
       } catch {
-        // ignore parse errors
+        fail("分析連線中斷，請再試一次")
       }
-    }
+    })()
 
-    es.onerror = () => {
-      if (phase !== "done") {
-        onError("分析連接中斷，請重試")
-        es.close()
-      }
-    }
-
-    return () => es.close()
+    return () => controller.abort()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
+  const stage = phase === "connecting" ? 0 : phase === "streaming" ? (received > 0 ? 2 : 1) : 3
+
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
-      <div className="flex items-center gap-3">
-        {phase !== "done" && <Spinner size="sm" />}
-        {phase === "done" && <div className="w-2 h-2 rounded-full bg-green-500" />}
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            {phase === "connecting" ? "連接 AI 分析引擎..." :
-             phase === "streaming" ? "正在生成中西醫整合分析..." :
-             "分析完成！"}
-          </p>
-          <p className="text-xs text-gray-400">Claude AI · 中西醫整合模型</p>
-        </div>
-      </div>
-
-      {text && (
-        <div
-          ref={textRef}
-          className="max-h-64 overflow-y-auto rounded-xl bg-gray-50 border border-gray-200 p-4"
-        >
-          <pre
-            className={`text-sm text-gray-600 font-mono whitespace-pre-wrap leading-relaxed ${phase === "streaming" ? "cursor-blink" : ""}`}
-          >
-            {text}
-          </pre>
-        </div>
-      )}
-
-      {phase === "connecting" && (
-        <div className="space-y-2 animate-pulse">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className={`h-3 rounded-full bg-gray-200 ${i % 2 === 0 ? "w-full" : "w-3/4"}`} />
-          ))}
-        </div>
-      )}
+    <div
+      className="rounded-[28px] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-soft)] px-6 py-10 sm:py-12 flex flex-col items-center text-center"
+      aria-live="polite"
+    >
+      <BreathOrb guide className="w-40 sm:w-48" />
+      <h1 className="mt-6 text-2xl text-[var(--ink)]">正在整理你的報告</h1>
+      <p className="mt-2 text-[15px] text-[var(--ink-3)] max-w-[26em]">
+        大約需要半分鐘。等待的時候，跟著圓圈慢慢呼吸。
+      </p>
+      <ol className="mt-8 w-full max-w-xs space-y-3 text-left">
+        {STAGES.map((label, i) => (
+          <li key={label} className="flex items-center gap-3 text-[15px]">
+            <span
+              className={cn(
+                "grid place-items-center w-6 h-6 rounded-full shrink-0",
+                i < stage && "bg-[var(--primary)] text-[var(--surface)]",
+                i === stage && "border-2 border-[var(--primary)]",
+                i > stage && "border-2 border-[var(--line-2)]",
+              )}
+            >
+              {i < stage && <Check size={14} strokeWidth={3} aria-hidden />}
+              {i === stage && <span className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse" />}
+            </span>
+            <span className={i <= stage ? "text-[var(--ink)]" : "text-[var(--ink-4)]"}>{label}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   )
 }

@@ -2,6 +2,8 @@
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { PageWrapper } from "@/components/layout/PageWrapper"
+import { PageHeader } from "@/components/layout/PageHeader"
+import { FlowSteps } from "@/components/flow/FlowSteps"
 import { DataPreview } from "@/components/upload/DataPreview"
 import { DateRangePicker } from "@/components/upload/DateRangePicker"
 import { DataTypeSelector } from "@/components/upload/DataTypeSelector"
@@ -9,10 +11,11 @@ import { Button } from "@/components/ui/Button"
 import { Card } from "@/components/ui/Card"
 import { Spinner } from "@/components/ui/Spinner"
 import { ProgressBar } from "@/components/ui/ProgressBar"
-import { FadeIn, Stagger, StaggerItem } from "@/components/ui/FadeIn"
+import { FadeIn } from "@/components/ui/FadeIn"
 import { useHealthData } from "@/hooks/useHealthData"
 import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { FileUp, CheckCircle2, AlertCircle } from "lucide-react"
 
 // ── Drag-and-drop XML dropzone ──────────────────────────────────────
 function XmlDropzone({ onFile }: { onFile: (f: File) => void }) {
@@ -28,28 +31,29 @@ function XmlDropzone({ onFile }: { onFile: (f: File) => void }) {
   }
 
   return (
-    <div
+    <label
       onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => { e.preventDefault(); setDragging(false); handle(e.dataTransfer.files) }}
       className={cn(
-        "relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 cursor-pointer",
-        dragging ? "border-[#0D7A66] bg-[#E8F5F2]" : "border-gray-300 hover:border-[#0D7A66]/50 hover:bg-gray-50",
+        "relative flex flex-col items-center justify-center gap-3 rounded-[24px] border-2 border-dashed px-6 py-12 text-center cursor-pointer transition-colors",
+        dragging
+          ? "border-[var(--primary)] bg-[var(--primary-wash)]"
+          : "border-[var(--line-2)] bg-[var(--surface)] hover:border-[var(--primary-line)] hover:bg-[var(--primary-wash)]",
       )}
     >
       <input
         type="file"
         accept=".xml,.gz"
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        className="sr-only"
         onChange={(e) => handle(e.target.files)}
       />
-      <p className="text-gray-900 text-lg font-medium">拖放 Apple Health XML</p>
-      <p className="text-gray-400 text-sm mt-2">或點擊選擇 export.xml（亦可選已 gzip 的 .xml.gz）</p>
-      <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-gray-100 border border-gray-200">
-        <span className="text-gray-400 text-xs">支援格式：</span>
-        <span className="text-[#855D16] text-xs font-mono">.xml / .xml.gz</span>
-      </div>
-    </div>
+      <span className="grid place-items-center w-14 h-14 rounded-full bg-[var(--primary-wash)] text-[var(--primary)]">
+        <FileUp size={26} strokeWidth={1.8} aria-hidden />
+      </span>
+      <span className="font-display text-xl text-[var(--ink)]">把 export.xml 拖到這裡</span>
+      <span className="text-[15px] text-[var(--ink-3)]">或點一下選擇檔案。檔案會先在你的裝置上壓縮，再上傳。</span>
+    </label>
   )
 }
 
@@ -59,8 +63,8 @@ function StatusCard({ label, sub }: { label: string; sub?: string }) {
     <Card className="flex items-center gap-4 py-6">
       <Spinner />
       <div>
-        <p className="text-gray-900 font-medium">{label}</p>
-        {sub && <p className="text-gray-400 text-sm mt-0.5">{sub}</p>}
+        <p className="text-[var(--ink)] font-medium">{label}</p>
+        {sub && <p className="text-[var(--ink-3)] text-sm mt-0.5">{sub}</p>}
       </div>
     </Card>
   )
@@ -97,9 +101,9 @@ function EcgCsvSection({ sessionId }: { sessionId: string }) {
     <Card className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-700">ECG 心電圖資料（選填）</p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            ECG 資料不在 XML 內，請從 Apple Health App 個別匯出 CSV
+          <h3 className="font-medium text-[var(--ink)]">加入心電圖（選填）</h3>
+          <p className="text-sm text-[var(--ink-3)] mt-0.5">
+            心電圖不在剛才的檔案裡，需要從「健康」App 另外匯出 CSV。
           </p>
         </div>
         {ecgState === "done" && (
@@ -111,8 +115,7 @@ function EcgCsvSection({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* How to export ECG */}
-      <div className="text-xs text-gray-400 space-y-1 pb-1 border-b border-gray-200">
-        <p className="text-gray-600 font-medium mb-1.5">如何匯出 ECG CSV</p>
+      <div className="text-sm text-[var(--ink-3)] space-y-1 pb-3 border-b border-[var(--line)]">
         {[
           "開啟「健康」App → 瀏覽 → 心臟 → 心電圖",
           "點選任一 ECG 記錄 → 右上角「匯出」",
@@ -120,7 +123,7 @@ function EcgCsvSection({ sessionId }: { sessionId: string }) {
           "或使用 Health Auto Export App 批次匯出",
         ].map((s, i) => (
           <p key={i} className="flex gap-1.5">
-            <span className="text-[#0D7A66]">{i + 1}.</span>
+            <span className="text-[var(--primary)]">{i + 1}.</span>
             <span>{s}</span>
           </p>
         ))}
@@ -132,8 +135,8 @@ function EcgCsvSection({ sessionId }: { sessionId: string }) {
           onDragLeave={() => setDragging(false)}
           onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
           className={cn(
-            "relative border border-dashed rounded-xl p-6 text-center transition-all duration-200 cursor-pointer",
-            dragging ? "border-[#855D16]/60 bg-[#FEF3DC]" : "border-gray-300 hover:border-gray-400 hover:bg-gray-50",
+            "relative border border-dashed rounded-2xl p-6 text-center transition-colors cursor-pointer",
+            dragging ? "border-[var(--sand-deep)]/60 bg-[var(--sand-wash)]" : "border-gray-300 hover:border-gray-400 hover:bg-gray-50",
           )}
         >
           <input
@@ -142,7 +145,7 @@ function EcgCsvSection({ sessionId }: { sessionId: string }) {
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             onChange={(e) => handleFiles(e.target.files)}
           />
-          <p className="text-gray-500 text-sm">拖放 ECG.csv 或點擊選擇</p>
+          <p className="text-[var(--ink-2)] text-[15px]">把心電圖 CSV 拖到這裡，或點一下選擇</p>
           {ecgState === "error" && (
             <p className="text-red-500 text-xs mt-2">{ecgError}</p>
           )}
@@ -203,47 +206,44 @@ export default function UploadPage() {
     <PageWrapper maxWidth="md">
       <div className="space-y-8">
         {/* Header */}
-        <FadeIn delay={0.05}>
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-gray-900">上傳 Apple Health 資料</h1>
-            <p className="text-gray-500 text-sm">選取時間範圍與資料類型，系統僅提取所需欄位</p>
-          </div>
-        </FadeIn>
+        <div>
+          <FlowSteps current="data" />
+          <PageHeader
+            title="匯入你的健康資料"
+            description="上傳 iPhone「健康」App 匯出的檔案，接著選擇要看的期間。只會讀取分析需要的欄位。"
+          />
+        </div>
 
         {/* ── STEP 1: file drop ── */}
         {state === "idle" && (
           <>
-            <FadeIn delay={0.12}>
-              <Card className="space-y-3">
-                <p className="text-sm font-medium text-gray-700">如何匯出</p>
-                <ol className="space-y-1.5 text-sm text-gray-500">
-                  {[
-                    "開啟 iPhone「健康」App → 右上角頭像",
-                    "向下捲動 → 匯出所有健康數據",
-                    "等待完成 → 儲存到檔案",
-                    "解壓縮 .zip → 上傳 export.xml（瀏覽器會先 gzip 再上傳，節省流量）",
-                  ].map((s, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="text-[#0D7A66] font-mono flex-shrink-0">{i + 1}.</span>
-                      <span>{s}</span>
-                    </li>
-                  ))}
-                </ol>
-              </Card>
-            </FadeIn>
+            <XmlDropzone onFile={uploadXml} />
 
-            <FadeIn delay={0.2}>
-              <XmlDropzone onFile={uploadXml} />
-            </FadeIn>
+            <section aria-labelledby="export-how" className="rounded-[20px] bg-[var(--sand-wash)] p-5 sm:p-6">
+              <h2 id="export-how" className="text-lg text-[var(--ink)]">還沒有檔案？在 iPhone 上這樣匯出</h2>
+              <ol className="mt-4 grid sm:grid-cols-2 gap-x-6 gap-y-3">
+                {[
+                  "打開「健康」App，點右上角的頭像",
+                  "滑到最下面，點「輸出所有健康資料」",
+                  "等它準備好，選「儲存到檔案」",
+                  "解壓縮 .zip，上傳裡面的 export.xml",
+                ].map((s, i) => (
+                  <li key={i} className="flex gap-3 text-[15px] text-[var(--ink-2)]">
+                    <span className="grid place-items-center w-6 h-6 shrink-0 rounded-full bg-[var(--surface)] text-[var(--sand-deep)] font-display text-sm mt-0.5">
+                      {i + 1}
+                    </span>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
 
-            <FadeIn delay={0.28}>
-              <div className="text-center">
-                <p className="text-gray-400 text-sm mb-2">或者</p>
-                <Button variant="ghost" size="sm" onClick={() => router.push("/questionnaire")}>
-                  跳過，直接填寫症狀問卷
-                </Button>
-              </div>
-            </FadeIn>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-[20px] border border-[var(--line)] px-5 py-4">
+              <p className="text-[15px] text-[var(--ink-2)]">沒有 Apple Watch，或想先看看？</p>
+              <Button variant="secondary" size="sm" onClick={() => router.push("/questionnaire")}>
+                略過，直接填問卷
+              </Button>
+            </div>
           </>
         )}
 
@@ -254,32 +254,32 @@ export default function UploadPage() {
               <Spinner className="flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0 space-y-4">
                 <div>
-                  <p className="text-gray-900 font-medium">
-                    {state === "compressing" ? "正在壓縮" : "正在上傳"} <span className="font-mono text-sm break-all">{fileName}</span>
+                  <p className="text-[var(--ink)] font-medium">
+                    {state === "compressing" ? "正在壓縮" : "正在上傳"} <span className="text-sm text-[var(--ink-3)] break-all">{fileName}</span>
                   </p>
-                  <p className="text-gray-500 text-xs mt-1.5">
+                  <p className="text-[var(--ink-3)] text-sm mt-1.5">
                     {state === "compressing"
-                      ? "使用 gzip 縮小體積後再上傳；壓縮時間視檔案大小與裝置效能而定，請勿關閉頁面。"
-                      : "上傳進度以下方為準；大型檔案請保持螢幕開啟並維持網路穩定。"}
+                      ? "先在你的裝置上縮小檔案，大檔案可能要一兩分鐘，請不要關閉這個頁面。"
+                      : "大檔案請保持螢幕開啟、網路穩定。"}
                   </p>
                 </div>
                 {state === "compressing" ? (
                   <ProgressBar
                     indeterminate
                     value={0}
-                    label="gzip 壓縮處理中"
-                    color="#0D7A66"
+                    label="壓縮中"
+                    color="var(--primary)"
                   />
                 ) : (
                   <>
                     <ProgressBar
                       value={uploadPercent}
-                      label="上傳到伺服器"
+                      label="上傳中"
                       showValue
-                      color="#0D7A66"
+                      color="var(--primary)"
                     />
                     {uploadTotal > 0 && (
-                      <p className="text-xs text-gray-500 -mt-2">
+                      <p className="text-sm text-[var(--ink-3)] -mt-2">
                         已傳 {(uploadLoaded / 1024 / 1024).toFixed(2)} MB / {(uploadTotal / 1024 / 1024).toFixed(2)} MB
                       </p>
                     )}
@@ -293,27 +293,23 @@ export default function UploadPage() {
         {/* ── STEP 2b: scanning ── */}
         {state === "scanning" && (
           <StatusCard
-            label="掃描資料結構中…"
+            label="正在讀取檔案內容…"
             sub={
               uploadSizeMb != null && uploadSizeMb > 0
-                ? `解壓後約 ${fileSizeMb} MB（上傳約 ${uploadSizeMb} MB gzip）— 讀取日期範圍與資料類型`
-                : `${fileSizeMb} MB — 快速讀取日期範圍與資料類型`
+                ? `檔案約 ${fileSizeMb} MB，正在找出資料涵蓋的日期與種類`
+                : `檔案約 ${fileSizeMb} MB，正在找出資料涵蓋的日期與種類`
             }
           />
         )}
 
         {/* ── STEP 3: configure ── */}
         {state === "configuring" && scan && (
-          <Card className="space-y-6">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              <p className="text-gray-600 text-sm">
-                已掃描 <span className="text-gray-900 font-mono">{fileName}</span>
-                {uploadSizeMb != null && uploadSizeMb > 0 ? (
-                  <>（解壓後約 {fileSizeMb} MB，上傳約 {uploadSizeMb} MB gzip）</>
-                ) : (
-                  <>（{fileSizeMb} MB）</>
-                )}
+          <Card className="space-y-7">
+            <div className="flex items-center gap-2.5 text-[15px] text-[var(--ink-2)]">
+              <CheckCircle2 size={18} className="text-[var(--good-deep)] shrink-0" aria-hidden />
+              <p>
+                已讀取 <span className="text-[var(--ink)]">{fileName}</span>
+                <span className="text-[var(--ink-4)]">（{fileSizeMb} MB）</span>
               </p>
             </div>
 
@@ -332,13 +328,13 @@ export default function UploadPage() {
               onChange={setSelected}
             />
 
-            <div className="flex gap-3 justify-end pt-2">
-              <Button variant="secondary" onClick={reset}>重新上傳</Button>
+            <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-2">
+              <Button variant="ghost" onClick={reset}>換一個檔案</Button>
               <Button
                 disabled={!canExtract}
                 onClick={() => extract(startDate, endDate, selected)}
               >
-                開始提取資料 →
+                讀取這段期間的資料
               </Button>
             </div>
           </Card>
@@ -347,9 +343,9 @@ export default function UploadPage() {
         {/* ── STEP 4: extracting ── */}
         {state === "extracting" && (
           <Card>
-            <p className="text-sm font-medium text-gray-900">正在提取選定的資料…</p>
-            <p className="text-xs text-gray-500 mt-1">
-              時間範圍：{startDate} 至 {endDate}，資料類型：{selected.length} 項
+            <p className="font-medium text-[var(--ink)]">正在讀取資料…</p>
+            <p className="text-sm text-[var(--ink-3)] mt-1">
+              {startDate} 至 {endDate}，共 {selected.length} 種資料
             </p>
             <div className="mt-3">
               <ProgressBar
@@ -362,14 +358,14 @@ export default function UploadPage() {
 
         {/* ── STEP 5: error ── */}
         {state === "error" && (
-          <Card className="border-red-200">
+          <Card className="border-red-200 bg-red-50">
             <div className="flex items-start gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 flex-shrink-0" />
+              <AlertCircle size={20} className="text-red-600 mt-0.5 shrink-0" aria-hidden />
               <div>
-                <p className="text-red-600 font-medium">失敗</p>
-                <p className="text-gray-500 text-sm mt-1">{error}</p>
+                <p className="text-red-700 font-medium">檔案沒有讀取成功</p>
+                <p className="text-[var(--ink-2)] text-sm mt-1">{error}</p>
                 <Button variant="secondary" size="sm" className="mt-3" onClick={reset}>
-                  重新開始
+                  換一個檔案再試
                 </Button>
               </div>
             </div>
@@ -380,24 +376,16 @@ export default function UploadPage() {
         {state === "done" && health && (
           <div className="space-y-4">
             <FadeIn>
-              <Card className="border-green-200 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-green-700 font-medium">資料提取成功</p>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {Object.entries(recordCounts).map(([k, n]) => (
-                        <span key={k} className="text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 font-mono">
-                          {k} × {n}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="text-gray-400 text-xs">會話 ID: {sessionId}</p>
-                  </div>
+              <Card glow className="flex items-start gap-3">
+                <CheckCircle2 size={22} className="text-[var(--good-deep)] shrink-0 mt-0.5" aria-hidden />
+                <div>
+                  <p className="font-display text-xl text-[var(--ink)]">資料準備好了</p>
+                  <p className="text-[15px] text-[var(--ink-2)] mt-1">
+                    共讀到 {Object.values(recordCounts).reduce((a, n) => a + n, 0).toLocaleString()} 筆紀錄。接下來花三分鐘，告訴我們你最近的身體感受。
+                  </p>
                 </div>
               </Card>
             </FadeIn>
-
             <FadeIn delay={0.08}>
               <DataPreview health={health} />
             </FadeIn>
@@ -409,10 +397,10 @@ export default function UploadPage() {
             )}
 
             <FadeIn delay={0.22}>
-              <div className="flex gap-3 justify-end">
-                <Button variant="secondary" onClick={reset}>重新上傳</Button>
-                <Button onClick={() => router.push(`/questionnaire?session=${sessionId}`)}>
-                  繼續填寫問卷 →
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+                <Button variant="ghost" onClick={reset}>換一個檔案</Button>
+                <Button size="lg" onClick={() => router.push(`/questionnaire?session=${sessionId}`)}>
+                  下一步：身體感受
                 </Button>
               </div>
             </FadeIn>

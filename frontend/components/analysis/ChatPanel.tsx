@@ -1,6 +1,7 @@
 "use client"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { API_BASE } from "@/lib/constants"
+import { sessionHeaders } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 interface Message {
@@ -17,16 +18,18 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "您好！我已閱讀您的健康分析報告，有任何疑問都可以問我。例如：「我的 HRV 數值正常嗎？」、「為什麼建議我多做有氧運動？」",
+      content: "你好，我已經讀過你的報告。哪個數字看不懂、哪個建議不知道怎麼開始，都可以問我。",
     },
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Scroll the message list itself — scrollIntoView would drag the whole page down to the chat.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    const el = listRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
   }, [messages])
 
   const send = useCallback(async () => {
@@ -45,7 +48,7 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
     try {
       const res = await fetch(`${API_BASE}/api/analysis/chat/${sessionId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...sessionHeaders(sessionId) },
         body: JSON.stringify({
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
         }),
@@ -122,79 +125,54 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
   }
 
   return (
-    <div className="flex flex-col bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-        <div className="w-8 h-8 rounded-full bg-[#E8F5F2] flex items-center justify-center flex-shrink-0">
-          <svg className="w-4 h-4 text-[#0D7A66]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round"
-              d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-900">AI 追問助理</p>
-          <p className="text-xs text-gray-400">根據您的報告回答問題</p>
-        </div>
-        <div className="ml-auto flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs text-gray-400">已讀取報告</span>
-        </div>
-      </div>
-
+    <div className="flex flex-col bg-[var(--surface)] border border-[var(--line)] rounded-[24px] shadow-[var(--shadow-soft)] overflow-hidden">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 min-h-[280px] max-h-[420px]">
+      <div ref={listRef} className="flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-4 min-h-[300px] max-h-[460px]" aria-live="polite">
         {messages.map((msg, i) => (
           <div
             key={i}
             className={cn("flex gap-3", msg.role === "user" ? "justify-end" : "justify-start")}
           >
             {msg.role === "assistant" && (
-              <div className="w-7 h-7 rounded-full bg-[#E8F5F2] flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-[#0D7A66] text-xs font-bold">AI</span>
-              </div>
+              <span className="w-7 h-7 rounded-full bg-[var(--sage)] shrink-0 mt-1 shadow-[inset_-3px_-3px_0_color-mix(in_oklab,var(--primary)_55%,transparent)]" aria-hidden />
             )}
             <div
               className={cn(
-                "max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed",
+                "max-w-[85%] px-4 py-3 rounded-[20px] text-[15px] whitespace-pre-wrap",
                 msg.role === "user"
-                  ? "bg-[#0D7A66] text-white rounded-tr-sm"
-                  : "bg-gray-50 text-gray-800 border border-gray-200 rounded-tl-sm",
+                  ? "bg-[var(--primary)] text-[var(--surface)] rounded-br-md"
+                  : "bg-[var(--wash)] text-[var(--ink)] rounded-bl-md",
               )}
             >
               {msg.content || (msg.streaming && (
                 <span className="flex gap-1 items-center h-4">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--ink-4)] animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--ink-4)] animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--ink-4)] animate-bounce" style={{ animationDelay: "300ms" }} />
                 </span>
               ))}
               {msg.streaming && msg.content && (
-                <span className="inline-block w-0.5 h-4 bg-gray-400 animate-pulse ml-0.5 align-middle" />
+                <span className="inline-block w-0.5 h-4 bg-[var(--ink-4)] animate-pulse ml-0.5 align-middle" />
               )}
             </div>
-            {msg.role === "user" && (
-              <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-gray-600 text-xs font-bold">我</span>
-              </div>
-            )}
           </div>
         ))}
-        <div ref={bottomRef} />
       </div>
 
       {/* Suggestions */}
       {messages.length === 1 && (
         <div className="px-5 pb-3 flex flex-wrap gap-2">
           {[
-            "我的 HRV 數值代表什麼？",
-            "我應該多久追蹤一次？",
-            "這些建議要怎麼開始執行？",
-            "我的風險等級嚴重嗎？",
+            "我的 HRV 偏低要緊嗎？",
+            "多久該再檢視一次？",
+            "第一個建議要怎麼開始？",
+            "什麼情況要去看醫生？",
           ].map((q) => (
             <button
               key={q}
               onClick={() => { setInput(q); textareaRef.current?.focus() }}
-              className="text-xs px-3 py-1.5 rounded-full border border-[#9FD1C8] text-[#0D7A66] bg-[#E8F5F2] hover:bg-[#d3ede8] transition-colors"
+              type="button"
+              className="text-sm px-4 rounded-full border border-[var(--line)] text-[var(--ink-2)] bg-[var(--surface)] hover:border-[var(--primary-line)] hover:text-[var(--primary)] transition-colors"
             >
               {q}
             </button>
@@ -203,7 +181,7 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
       )}
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-gray-100 flex gap-3 items-end">
+      <div className="px-3 sm:px-4 py-3 border-t border-[var(--line)] flex gap-2 items-end">
         <textarea
           ref={textareaRef}
           rows={1}
@@ -215,22 +193,25 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
           }}
           onKeyDown={handleKey}
           disabled={loading}
-          placeholder="輸入問題，按 Enter 送出（Shift+Enter 換行）"
-          className="flex-1 resize-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#0D7A66] focus:ring-1 focus:ring-[#0D7A66]/20 disabled:opacity-50 transition-all overflow-hidden"
-          style={{ minHeight: "42px" }}
+          aria-label="輸入你的問題"
+          placeholder="問問看這份報告…"
+          className="flex-1 resize-none bg-[var(--wash)] border border-transparent rounded-[22px] px-4 py-2.5 text-[15px] text-[var(--ink)] placeholder:text-[var(--ink-4)] focus:outline-none focus:border-[var(--primary-line)] disabled:opacity-50 overflow-hidden"
+          style={{ minHeight: "44px" }}
         />
         <button
           onClick={send}
           disabled={loading || !input.trim()}
-          className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#0D7A66] hover:bg-[#1A9479] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+          type="button"
+          aria-label="送出"
+          className="flex-shrink-0 w-11 h-11 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-40 disabled:cursor-not-allowed justify-center transition-colors"
         >
           {loading ? (
-            <svg className="w-4 h-4 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-[var(--surface)] animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           ) : (
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-4 h-4 text-[var(--surface)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
           )}

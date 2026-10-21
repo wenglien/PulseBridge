@@ -13,14 +13,14 @@ export function DateRangePicker({
   minDate, maxDate, startDate, endDate, onStartChange, onEndChange,
 }: DateRangePickerProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-gradient-to-b from-gray-50/90 to-white p-4 sm:p-5 shadow-sm space-y-3 ring-1 ring-black/[0.03]">
+    <div className="space-y-3">
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 tracking-tight">選取時間範圍</h3>
+        <h3 className="font-display text-lg text-[var(--ink)]">要看哪一段時間？</h3>
         {minDate && (
-          <p className="text-xs text-gray-500 mt-1">
-            資料涵蓋期間：<span className="text-gray-800 font-mono">{minDate}</span>
-            {" "}至{" "}
-            <span className="text-gray-800 font-mono">{maxDate}</span>
+          <p className="text-sm text-[var(--ink-3)] mt-0.5">
+            檔案裡的資料從 {minDate}
+            {" "}到{" "}
+            {maxDate}，預設為最近 90 天。
           </p>
         )}
       </div>
@@ -38,7 +38,7 @@ export function DateRangePicker({
               min={minDate || undefined}
               max={field.max || maxDate || undefined}
               onChange={(e) => field.onChange(e.target.value)}
-              className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0D7A66]/25 focus:border-[#0D7A66]"
+              className="w-full bg-[var(--surface)] border border-gray-200 rounded-xl px-3 py-2.5 text-[15px] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/25 focus:border-[var(--primary)]"
             />
           </div>
         ))}
