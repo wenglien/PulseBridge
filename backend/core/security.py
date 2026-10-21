@@ -4,20 +4,25 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt is used directly: passlib 1.7.4 crashes on bcrypt >= 4.1 during its
+# backend self-test. Hashes are standard $2b$ strings, compatible either way.
+_BCRYPT_MAX_BYTES = 72
 
 
 def hash_password(plain: str) -> str:
-    return pwd_context.hash(plain)
+    return bcrypt.hashpw(plain.encode()[:_BCRYPT_MAX_BYTES], bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    try:
+        return bcrypt.checkpw(plain.encode()[:_BCRYPT_MAX_BYTES], hashed.encode())
+    except ValueError:  # malformed stored hash
+        return False
 
 
 def create_access_token(user_id: str, email: str) -> str:

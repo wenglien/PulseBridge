@@ -8,10 +8,18 @@ Usage (existing XML flow):
 Usage (HealthKit incremental flow):
     result = await run_feature_pipeline(session_id, records, user_id=...)
 """
-import json
-from typing import Optional
+from dataclasses import dataclass
+from typing import AsyncIterator, Optional
 
-from models.analysis import AnalysisResult
+from models.analysis import (
+    AnalysisResult,
+    ConstitutionScore,
+    ECGAnalysis,
+    HRVAnalysis,
+    IntegratedCardiacAssessment,
+    RiskAlert,
+    WesternFlags,
+)
 from models.health_data import ECGReading, HealthData, HRVMetrics, SleepData, SleepStage
 from models.questionnaire import QuestionnaireResponse
 from core.ecg_analyzer import (
@@ -29,15 +37,22 @@ from core.claude_engine import stream_analysis, build_analysis_result_from_claud
 
 # ── Public API ──────────────────────────────────────────────────────────────
 
-async def run_full_analysis(
-    session_id: str,
+@dataclass
+class AnalysisContext:
+    """Rule-based pre-processing results fed to the LLM and the final result."""
+    ecg_alerts: list[RiskAlert]
+    ecg_analysis: ECGAnalysis
+    hrv_analysis: HRVAnalysis
+    western_flags: WesternFlags
+    integrated: IntegratedCardiacAssessment
+    tcm_scores: list[ConstitutionScore]
+
+
+def prepare_analysis_context(
     health_data: HealthData,
     questionnaire: QuestionnaireResponse,
-) -> AnalysisResult:
-    """
-    Full analysis pipeline used by the existing XML upload flow.
-    Identical to what analysis.py does, extracted here for reuse.
-    """
+) -> AnalysisContext:
+    """Run every deterministic analyser (ECG, HRV, red flags, TCM scoring)."""
     ecg_alerts = analyze_ecg(health_data.ecg_readings)
     if health_data.hrv and health_data.hrv.sdnn > 0:
         ecg_alerts.extend(analyze_hrv_risks(health_data.hrv))
@@ -66,17 +81,46 @@ async def run_full_analysis(
                 integrated.follow_up_priority = "1_week"
     tcm_scores      = score_constitutions(health_data, questionnaire)
 
-    full_response = ""
-    async for chunk in stream_analysis(
-        health_data, questionnaire, tcm_scores,
-        ecg_alerts, ecg_analysis, hrv_analysis, integrated,
-    ):
-        full_response += chunk
-
-    return build_analysis_result_from_claude(
-        session_id, full_response, tcm_scores, ecg_alerts,
-        western_flags, ecg_analysis, hrv_analysis, integrated,
+    return AnalysisContext(
+        ecg_alerts=ecg_alerts,
+        ecg_analysis=ecg_analysis,
+        hrv_analysis=hrv_analysis,
+        western_flags=western_flags,
+        integrated=integrated,
+        tcm_scores=tcm_scores,
     )
+
+
+async def stream_llm_chunks(
+    health_data: HealthData,
+    questionnaire: QuestionnaireResponse,
+    ctx: AnalysisContext,
+) -> AsyncIterator[str]:
+    async for chunk in stream_analysis(
+        health_data, questionnaire, ctx.tcm_scores,
+        ctx.ecg_alerts, ctx.ecg_analysis, ctx.hrv_analysis, ctx.integrated,
+    ):
+        yield chunk
+
+
+def build_result(session_id: str, raw_response: str, ctx: AnalysisContext) -> AnalysisResult:
+    return build_analysis_result_from_claude(
+        session_id, raw_response, ctx.tcm_scores, ctx.ecg_alerts,
+        ctx.western_flags, ctx.ecg_analysis, ctx.hrv_analysis, ctx.integrated,
+    )
+
+
+async def run_full_analysis(
+    session_id: str,
+    health_data: HealthData,
+    questionnaire: QuestionnaireResponse,
+) -> AnalysisResult:
+    """Full (non-streaming) analysis: rule-based context + LLM narrative."""
+    ctx = prepare_analysis_context(health_data, questionnaire)
+    full_response = ""
+    async for chunk in stream_llm_chunks(health_data, questionnaire, ctx):
+        full_response += chunk
+    return build_result(session_id, full_response, ctx)
 
 
 async def run_feature_pipeline(

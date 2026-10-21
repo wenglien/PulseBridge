@@ -1,47 +1,44 @@
 "use client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Activity, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/ui/ThemeToggle"
+import { UserRound } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
+
+const FLOW_PATHS = ["/upload", "/questionnaire", "/analysis"]
 
 const NAV_LINKS = [
-  { href: "/",              label: "首頁",    exact: true  },
-  { href: "/upload",        label: "上傳資料", exact: false },
-  { href: "/questionnaire", label: "症狀問卷", exact: false },
-  { href: "/history",       label: "歷史紀錄", exact: false },
+  { href: "/",        label: "首頁",     match: (p: string) => p === "/" },
+  { href: "/upload",  label: "開始檢視", match: (p: string) => FLOW_PATHS.some((f) => p.startsWith(f)) },
+  { href: "/history", label: "我的報告", match: (p: string) => p.startsWith("/history") },
 ]
 
 export function Navbar() {
   const pathname = usePathname()
+  const auth = useAuth()
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--surface)]/90 shadow-sm backdrop-blur-xl">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 md:h-16 flex items-center justify-between gap-4">
-
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0D7A66] text-white shadow-sm shadow-[#0D7A66]/25">
-            <Activity className="h-4 w-4" />
-          </span>
-          <span className="font-bold text-[var(--text-1)] text-base tracking-tight">
-            Pulse<span className="text-[#0D7A66]">Bridge</span>
-          </span>
+    <nav className="sticky top-0 z-50 bg-[var(--bg)]/85 backdrop-blur-md">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 md:h-16 flex items-center justify-between gap-6">
+        <Link href="/" className="flex items-center gap-2.5 flex-shrink-0" aria-label="脈橋 PulseBridge 首頁">
+          <span className="w-6 h-6 rounded-full bg-[var(--sage)] shadow-[inset_-3px_-3px_0_color-mix(in_oklab,var(--primary)_60%,transparent)]" aria-hidden />
+          <span className="font-display text-xl leading-none text-[var(--ink)]">脈橋</span>
         </Link>
 
-        {/* Desktop nav links */}
-        <div className="hidden md:flex items-center gap-0.5 flex-1 justify-center">
+        <div className="hidden md:flex items-center gap-1">
           {NAV_LINKS.map((link) => {
-            const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href)
+            const active = link.match(pathname)
             return (
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150",
-                  isActive
-                    ? "bg-[var(--surface-accent)] text-[#0D7A66] font-semibold"
-                    : "text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--surface-muted)]",
+                  "px-4 py-2 rounded-full text-[15px] transition-colors",
+                  active
+                    ? "bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-soft)]"
+                    : "text-[var(--ink-3)] hover:text-[var(--ink)]",
                 )}
               >
                 {link.label}
@@ -50,26 +47,20 @@ export function Navbar() {
           })}
         </div>
 
-        {/* Desktop CTA */}
-        <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1">
           <ThemeToggle />
           <Link
-            href="/upload"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0D7A66] text-white text-sm font-semibold hover:bg-[#1A9479] transition-colors shadow-sm shadow-[#0D7A66]/20"
+            href="/account"
+            aria-label={auth ? `帳號：${auth.email}` : "登入"}
+            aria-current={pathname.startsWith("/account") ? "page" : undefined}
+            className={cn(
+              "h-10 rounded-full justify-center gap-1.5 text-[15px] transition-colors",
+              auth
+                ? "w-10 bg-[var(--primary-wash)] text-[var(--primary)]"
+                : "px-4 text-[var(--ink-2)] hover:text-[var(--ink)] hover:bg-[var(--wash)]",
+            )}
           >
-            開始分析
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        {/* Mobile: compact CTA only (bottom nav handles navigation) */}
-        <div className="md:hidden flex items-center gap-2">
-          <ThemeToggle className="w-9 h-9" />
-          <Link
-            href="/upload"
-            className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#0D7A66] text-white text-sm font-semibold hover:bg-[#1A9479] transition-colors"
-          >
-            開始分析
+            {auth ? <span className="font-display text-base uppercase">{auth.email[0]}</span> : <><UserRound size={17} aria-hidden />登入</>}
           </Link>
         </div>
       </div>

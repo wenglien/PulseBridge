@@ -34,24 +34,24 @@ export function DataTypeSelector({ available, selected, onChange }: DataTypeSele
   const clearAll  = () => onChange([])
 
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-4 sm:p-5 shadow-sm space-y-4">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-[var(--text-1)] tracking-tight">選擇資料類型</h3>
-          <p className="text-xs text-[var(--text-2)] mt-0.5">勾選要從 XML 提取的欄位；灰色項目代表此檔案中未偵測到該類型</p>
+          <h3 className="font-display text-lg text-[var(--ink)]">要分析哪些資料？</h3>
+          <p className="text-xs text-gray-500 mt-0.5">預設已選好檔案裡有的種類。灰色的代表檔案中沒有這項資料。</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={selectAll}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-[#0D7A66]/35 bg-[var(--surface)] text-[#0D7A66] hover:bg-[#E8F5F2] hover:border-[#0D7A66]/55 transition-colors"
+            className="text-xs font-medium px-3 py-1.5 rounded-full border border-[var(--primary)]/35 bg-[var(--surface)] text-[var(--primary)] hover:bg-[var(--primary-wash)] hover:border-[var(--primary)]/55 transition-colors"
           >
             全選
           </button>
           <button
             type="button"
             onClick={clearAll}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-1)] transition-colors"
+            className="text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 bg-[var(--surface)] text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
           >
             清除
           </button>
@@ -70,20 +70,20 @@ export function DataTypeSelector({ available, selected, onChange }: DataTypeSele
               onClick={() => isAvailable && toggle(opt.key)}
               disabled={!isAvailable}
               className={cn(
-                "flex items-start gap-3 px-3.5 py-3 rounded-lg border text-left transition-all duration-200 shadow-sm",
+                "flex items-start gap-3 px-4 py-3 rounded-2xl border text-left transition-colors",
                 isAvailable
                   ? isSelected
-                    ? "border-[#0D7A66] bg-[#E8F5F2] ring-1 ring-[#0D7A66]/20"
-                    : "border-[var(--border)] bg-[var(--surface)] hover:border-[#0D7A66]/35 hover:bg-[var(--surface-raised)]"
-                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-3)] opacity-75 cursor-not-allowed shadow-none",
+                    ? "border-[var(--primary)] bg-[var(--primary-wash)]"
+                    : "border-gray-200 bg-[var(--surface)] hover:border-[var(--primary)]/35 hover:bg-gray-50/80"
+                  : "border-gray-100 bg-gray-50/60 text-gray-400 opacity-75 cursor-not-allowed",
               )}
             >
               <div className={cn(
                 "w-4 h-4 rounded flex-shrink-0 mt-0.5 border-2 transition-colors",
                 isSelected
-                  ? "bg-[#0D7A66] border-[#0D7A66]"
-                  : "border-[var(--border-mid)] bg-[var(--surface)]",
-                !isAvailable && "border-[var(--border)] bg-[var(--surface-muted)]",
+                  ? "bg-[var(--primary)] border-[var(--primary)]"
+                  : "border-gray-300 bg-[var(--surface)]",
+                !isAvailable && "border-gray-200 bg-gray-100",
               )}>
                 {isSelected && (
                   <div className="w-full h-full flex items-center justify-center">
@@ -95,18 +95,18 @@ export function DataTypeSelector({ available, selected, onChange }: DataTypeSele
               <div className="min-w-0">
                 <p className={cn(
                   "text-sm font-medium",
-                  isSelected ? "text-[var(--text-1)]" : "text-[var(--text-1)]",
-                  !isAvailable && "text-[var(--text-2)]",
+                  isSelected ? "text-gray-900" : "text-gray-800",
+                  !isAvailable && "text-gray-500",
                 )}>
                   {opt.label}
                   {!isAvailable && (
-                    <span className="ml-1.5 text-xs font-normal text-[var(--text-3)]">無資料</span>
+                    <span className="ml-1.5 text-xs font-normal text-gray-400">無資料</span>
                   )}
                 </p>
                 <p className={cn(
                   "text-xs mt-0.5",
-                  isSelected ? "text-[var(--text-2)]" : "text-[var(--text-2)]",
-                  !isAvailable && "text-[var(--text-3)]",
+                  isSelected ? "text-gray-600" : "text-gray-500",
+                  !isAvailable && "text-gray-400",
                 )}>{opt.desc}</p>
               </div>
             </button>

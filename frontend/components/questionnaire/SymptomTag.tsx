@@ -1,5 +1,5 @@
 "use client"
-import { cn, severityLabel, severityColor } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import type { SymptomSeverity } from "@/types/questionnaire"
 
 interface SymptomTagProps {
@@ -8,37 +8,45 @@ interface SymptomTagProps {
   onChange: (v: SymptomSeverity) => void
 }
 
-export function SymptomTag({ label, value, onChange }: SymptomTagProps) {
-  const cycle = () => onChange(((value + 1) % 4) as SymptomSeverity)
+const LEVELS: { v: SymptomSeverity; label: string; active: string }[] = [
+  { v: 0, label: "無", active: "bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-soft)]" },
+  { v: 1, label: "輕", active: "bg-amber-200 text-[var(--ink)]" },
+  { v: 2, label: "中", active: "bg-orange-300 text-[var(--ink)]" },
+  { v: 3, label: "重", active: "bg-[var(--brick)] text-white" },
+]
 
+/** One symptom with an explicit 無／輕／中／重 choice (a radio group). */
+export function SymptomTag({ label, value, onChange }: SymptomTagProps) {
   return (
-    <button
-      type="button"
-      onClick={cycle}
-      className={cn(
-        "flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all duration-200 select-none w-full text-left",
-        value === 0
-          ? "border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:border-[var(--border-mid)] hover:text-[var(--text-2)]"
-          : "border-[var(--border-mid)] bg-[var(--surface-muted)] text-[var(--text-1)]",
-      )}
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="flex items-center justify-between gap-3 py-3"
     >
-      <span
-        className={cn(
-          "w-2.5 h-2.5 rounded-full flex-shrink-0 transition-colors duration-200",
-          severityColor(value),
-        )}
-      />
-      <span>{label}</span>
-      {value > 0 && (
-        <span className={cn(
-          "ml-auto text-xs px-1.5 py-0.5 rounded-md",
-          value === 1 ? "bg-yellow-100 text-yellow-700" :
-          value === 2 ? "bg-orange-100 text-orange-700" :
-          "bg-red-100 text-red-700",
-        )}>
-          {severityLabel(value)}
-        </span>
-      )}
-    </button>
+      <span className={cn("text-[15px]", value > 0 ? "text-[var(--ink)] font-medium" : "text-[var(--ink-2)]")}>
+        {label}
+      </span>
+      <div className="flex shrink-0 rounded-full bg-[var(--wash-2)] p-1">
+        {LEVELS.map((l) => {
+          const checked = value === l.v
+          return (
+            <button
+              key={l.v}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              aria-label={`${label}：${["無", "輕微", "中等", "嚴重"][l.v]}`}
+              onClick={() => onChange(l.v)}
+              className={cn(
+                "w-10 sm:w-11 min-h-9 justify-center rounded-full text-sm transition-colors",
+                checked ? l.active : "text-[var(--ink-4)] hover:text-[var(--ink)]",
+              )}
+            >
+              {l.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }

@@ -1,87 +1,294 @@
 @import "tailwindcss";
 
+/*
+ * PulseBridge 脈橋 — warm wellness.
+ * Sage + sand on rice paper, rounded type. Western data reads in mist blue,
+ * TCM guidance in sand, so the two halves of every report stay distinct.
+ * All Tailwind hue/gray scales are remapped onto these tokens, so any
+ * component using e.g. text-gray-500 or bg-red-50 follows the palette and
+ * dark mode automatically.
+ */
 @theme {
-  /* ── Brand: Jade (primary) ── */
-  --color-jade:           #0D7A66;
-  --color-jade-mid:       #1A9479;
-  --color-jade-subtle:    #E8F5F2;
-  --color-jade-border:    #9FD1C8;
-
-  /* ── Brand: Gold (accent) ── */
-  --color-gold:           #855D16;
-  --color-gold-subtle:    #FEF3DC;
-  --color-gold-border:    #D4A54A;
-
-  /* ── Legacy aliases (backward compat with inline usages) ── */
-  --color-tcm-red:        #B91C1C;
-  --color-tcm-red-light:  #e53e5e;
-  --color-tcm-gold:       #855D16;
-  --color-tcm-jade:       #0D7A66;
-  --color-tcm-jade-light: #1A9479;
-  --color-tcm-ink:        #111827;
-  --color-tcm-cream:      #FEF9F0;
-
-  /* ── Risk levels ── */
-  --color-risk-critical:  #dc2626;
-  --color-risk-high:      #ea580c;
-  --color-risk-medium:    #d97706;
-  --color-risk-low:       #16a34a;
-
-  /* ── Fonts ── */
   --font-zh:      "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
-  --font-display: "Noto Serif TC", "Songti TC", serif;
+  --font-display: "Huninn", "jf-openhuninn", "Noto Sans TC", "PingFang TC", sans-serif;
+  --font-sans:    var(--font-zh);
+
+  --color-white: #FFFFFF;
+
+  --color-risk-critical: var(--brick);
+  --color-risk-high:     var(--clay);
+  --color-risk-medium:   var(--honey);
+  --color-risk-low:      var(--good);
+
+  --radius-card: 20px;
+
+  --color-red-50: color-mix(in oklab, var(--brick) 8%, var(--surface));
+  --color-red-100: color-mix(in oklab, var(--brick) 14%, var(--surface));
+  --color-red-200: color-mix(in oklab, var(--brick) 26%, var(--surface));
+  --color-red-300: color-mix(in oklab, var(--brick) 45%, var(--surface));
+  --color-red-400: color-mix(in oklab, var(--brick) 72%, var(--surface));
+  --color-red-500: var(--brick);
+  --color-red-600: var(--brick);
+  --color-red-700: color-mix(in oklab, var(--brick) 85%, var(--ink));
+  --color-red-800: color-mix(in oklab, var(--brick) 70%, var(--ink));
+  --color-red-900: color-mix(in oklab, var(--brick) 55%, var(--ink));
+  --color-red-950: color-mix(in oklab, var(--brick) 45%, var(--ink));
+  --color-rose-50: color-mix(in oklab, var(--brick) 8%, var(--surface));
+  --color-rose-100: color-mix(in oklab, var(--brick) 14%, var(--surface));
+  --color-rose-200: color-mix(in oklab, var(--brick) 26%, var(--surface));
+  --color-rose-300: color-mix(in oklab, var(--brick) 45%, var(--surface));
+  --color-rose-400: color-mix(in oklab, var(--brick) 72%, var(--surface));
+  --color-rose-500: var(--brick);
+  --color-rose-600: var(--brick);
+  --color-rose-700: color-mix(in oklab, var(--brick) 85%, var(--ink));
+  --color-rose-800: color-mix(in oklab, var(--brick) 70%, var(--ink));
+  --color-rose-900: color-mix(in oklab, var(--brick) 55%, var(--ink));
+  --color-rose-950: color-mix(in oklab, var(--brick) 45%, var(--ink));
+  --color-orange-50: color-mix(in oklab, var(--clay) 8%, var(--surface));
+  --color-orange-100: color-mix(in oklab, var(--clay) 14%, var(--surface));
+  --color-orange-200: color-mix(in oklab, var(--clay) 26%, var(--surface));
+  --color-orange-300: color-mix(in oklab, var(--clay) 45%, var(--surface));
+  --color-orange-400: color-mix(in oklab, var(--clay) 72%, var(--surface));
+  --color-orange-500: var(--clay);
+  --color-orange-600: var(--clay);
+  --color-orange-700: color-mix(in oklab, var(--clay) 85%, var(--ink));
+  --color-orange-800: color-mix(in oklab, var(--clay) 70%, var(--ink));
+  --color-orange-900: color-mix(in oklab, var(--clay) 55%, var(--ink));
+  --color-orange-950: color-mix(in oklab, var(--clay) 45%, var(--ink));
+  --color-amber-50: color-mix(in oklab, var(--honey) 8%, var(--surface));
+  --color-amber-100: color-mix(in oklab, var(--honey) 14%, var(--surface));
+  --color-amber-200: color-mix(in oklab, var(--honey) 26%, var(--surface));
+  --color-amber-300: color-mix(in oklab, var(--honey) 45%, var(--surface));
+  --color-amber-400: color-mix(in oklab, var(--honey) 72%, var(--surface));
+  --color-amber-500: var(--honey);
+  --color-amber-600: var(--honey);
+  --color-amber-700: color-mix(in oklab, var(--honey) 85%, var(--ink));
+  --color-amber-800: color-mix(in oklab, var(--honey) 70%, var(--ink));
+  --color-amber-900: color-mix(in oklab, var(--honey) 55%, var(--ink));
+  --color-amber-950: color-mix(in oklab, var(--honey) 45%, var(--ink));
+  --color-yellow-50: color-mix(in oklab, var(--honey) 8%, var(--surface));
+  --color-yellow-100: color-mix(in oklab, var(--honey) 14%, var(--surface));
+  --color-yellow-200: color-mix(in oklab, var(--honey) 26%, var(--surface));
+  --color-yellow-300: color-mix(in oklab, var(--honey) 45%, var(--surface));
+  --color-yellow-400: color-mix(in oklab, var(--honey) 72%, var(--surface));
+  --color-yellow-500: var(--honey);
+  --color-yellow-600: var(--honey);
+  --color-yellow-700: color-mix(in oklab, var(--honey) 85%, var(--ink));
+  --color-yellow-800: color-mix(in oklab, var(--honey) 70%, var(--ink));
+  --color-yellow-900: color-mix(in oklab, var(--honey) 55%, var(--ink));
+  --color-yellow-950: color-mix(in oklab, var(--honey) 45%, var(--ink));
+  --color-green-50: color-mix(in oklab, var(--good-deep) 8%, var(--surface));
+  --color-green-100: color-mix(in oklab, var(--good-deep) 14%, var(--surface));
+  --color-green-200: color-mix(in oklab, var(--good-deep) 26%, var(--surface));
+  --color-green-300: color-mix(in oklab, var(--good-deep) 45%, var(--surface));
+  --color-green-400: color-mix(in oklab, var(--good-deep) 72%, var(--surface));
+  --color-green-500: var(--good-deep);
+  --color-green-600: var(--good-deep);
+  --color-green-700: color-mix(in oklab, var(--good-deep) 85%, var(--ink));
+  --color-green-800: color-mix(in oklab, var(--good-deep) 70%, var(--ink));
+  --color-green-900: color-mix(in oklab, var(--good-deep) 55%, var(--ink));
+  --color-green-950: color-mix(in oklab, var(--good-deep) 45%, var(--ink));
+  --color-emerald-50: color-mix(in oklab, var(--good-deep) 8%, var(--surface));
+  --color-emerald-100: color-mix(in oklab, var(--good-deep) 14%, var(--surface));
+  --color-emerald-200: color-mix(in oklab, var(--good-deep) 26%, var(--surface));
+  --color-emerald-300: color-mix(in oklab, var(--good-deep) 45%, var(--surface));
+  --color-emerald-400: color-mix(in oklab, var(--good-deep) 72%, var(--surface));
+  --color-emerald-500: var(--good-deep);
+  --color-emerald-600: var(--good-deep);
+  --color-emerald-700: color-mix(in oklab, var(--good-deep) 85%, var(--ink));
+  --color-emerald-800: color-mix(in oklab, var(--good-deep) 70%, var(--ink));
+  --color-emerald-900: color-mix(in oklab, var(--good-deep) 55%, var(--ink));
+  --color-emerald-950: color-mix(in oklab, var(--good-deep) 45%, var(--ink));
+  --color-teal-50: color-mix(in oklab, var(--good-deep) 8%, var(--surface));
+  --color-teal-100: color-mix(in oklab, var(--good-deep) 14%, var(--surface));
+  --color-teal-200: color-mix(in oklab, var(--good-deep) 26%, var(--surface));
+  --color-teal-300: color-mix(in oklab, var(--good-deep) 45%, var(--surface));
+  --color-teal-400: color-mix(in oklab, var(--good-deep) 72%, var(--surface));
+  --color-teal-500: var(--good-deep);
+  --color-teal-600: var(--good-deep);
+  --color-teal-700: color-mix(in oklab, var(--good-deep) 85%, var(--ink));
+  --color-teal-800: color-mix(in oklab, var(--good-deep) 70%, var(--ink));
+  --color-teal-900: color-mix(in oklab, var(--good-deep) 55%, var(--ink));
+  --color-teal-950: color-mix(in oklab, var(--good-deep) 45%, var(--ink));
+  --color-blue-50: color-mix(in oklab, var(--mist) 8%, var(--surface));
+  --color-blue-100: color-mix(in oklab, var(--mist) 14%, var(--surface));
+  --color-blue-200: color-mix(in oklab, var(--mist) 26%, var(--surface));
+  --color-blue-300: color-mix(in oklab, var(--mist) 45%, var(--surface));
+  --color-blue-400: color-mix(in oklab, var(--mist) 72%, var(--surface));
+  --color-blue-500: var(--mist);
+  --color-blue-600: var(--mist);
+  --color-blue-700: color-mix(in oklab, var(--mist) 85%, var(--ink));
+  --color-blue-800: color-mix(in oklab, var(--mist) 70%, var(--ink));
+  --color-blue-900: color-mix(in oklab, var(--mist) 55%, var(--ink));
+  --color-blue-950: color-mix(in oklab, var(--mist) 45%, var(--ink));
+  --color-sky-50: color-mix(in oklab, var(--mist) 8%, var(--surface));
+  --color-sky-100: color-mix(in oklab, var(--mist) 14%, var(--surface));
+  --color-sky-200: color-mix(in oklab, var(--mist) 26%, var(--surface));
+  --color-sky-300: color-mix(in oklab, var(--mist) 45%, var(--surface));
+  --color-sky-400: color-mix(in oklab, var(--mist) 72%, var(--surface));
+  --color-sky-500: var(--mist);
+  --color-sky-600: var(--mist);
+  --color-sky-700: color-mix(in oklab, var(--mist) 85%, var(--ink));
+  --color-sky-800: color-mix(in oklab, var(--mist) 70%, var(--ink));
+  --color-sky-900: color-mix(in oklab, var(--mist) 55%, var(--ink));
+  --color-sky-950: color-mix(in oklab, var(--mist) 45%, var(--ink));
+  --color-indigo-50: color-mix(in oklab, var(--mist) 8%, var(--surface));
+  --color-indigo-100: color-mix(in oklab, var(--mist) 14%, var(--surface));
+  --color-indigo-200: color-mix(in oklab, var(--mist) 26%, var(--surface));
+  --color-indigo-300: color-mix(in oklab, var(--mist) 45%, var(--surface));
+  --color-indigo-400: color-mix(in oklab, var(--mist) 72%, var(--surface));
+  --color-indigo-500: var(--mist);
+  --color-indigo-600: var(--mist);
+  --color-indigo-700: color-mix(in oklab, var(--mist) 85%, var(--ink));
+  --color-indigo-800: color-mix(in oklab, var(--mist) 70%, var(--ink));
+  --color-indigo-900: color-mix(in oklab, var(--mist) 55%, var(--ink));
+  --color-indigo-950: color-mix(in oklab, var(--mist) 45%, var(--ink));
+  --color-gray-50: var(--wash);
+  --color-gray-100: var(--wash-2);
+  --color-gray-200: var(--line);
+  --color-gray-300: var(--line-2);
+  --color-gray-400: var(--ink-4);
+  --color-gray-500: var(--ink-3);
+  --color-gray-600: var(--ink-2);
+  --color-gray-700: var(--ink-700);
+  --color-gray-800: var(--ink-800);
+  --color-gray-900: var(--ink);
+  --color-gray-950: var(--ink);
+  --color-slate-50: var(--wash);
+  --color-slate-100: var(--wash-2);
+  --color-slate-200: var(--line);
+  --color-slate-300: var(--line-2);
+  --color-slate-400: var(--ink-4);
+  --color-slate-500: var(--ink-3);
+  --color-slate-600: var(--ink-2);
+  --color-slate-700: var(--ink-700);
+  --color-slate-800: var(--ink-800);
+  --color-slate-900: var(--ink);
+  --color-slate-950: var(--ink);
+  --color-zinc-50: var(--wash);
+  --color-zinc-100: var(--wash-2);
+  --color-zinc-200: var(--line);
+  --color-zinc-300: var(--line-2);
+  --color-zinc-400: var(--ink-4);
+  --color-zinc-500: var(--ink-3);
+  --color-zinc-600: var(--ink-2);
+  --color-zinc-700: var(--ink-700);
+  --color-zinc-800: var(--ink-800);
+  --color-zinc-900: var(--ink);
+  --color-zinc-950: var(--ink);
+  --color-neutral-50: var(--wash);
+  --color-neutral-100: var(--wash-2);
+  --color-neutral-200: var(--line);
+  --color-neutral-300: var(--line-2);
+  --color-neutral-400: var(--ink-4);
+  --color-neutral-500: var(--ink-3);
+  --color-neutral-600: var(--ink-2);
+  --color-neutral-700: var(--ink-700);
+  --color-neutral-800: var(--ink-800);
+  --color-neutral-900: var(--ink);
+  --color-neutral-950: var(--ink);
+  --color-stone-50: var(--wash);
+  --color-stone-100: var(--wash-2);
+  --color-stone-200: var(--line);
+  --color-stone-300: var(--line-2);
+  --color-stone-400: var(--ink-4);
+  --color-stone-500: var(--ink-3);
+  --color-stone-600: var(--ink-2);
+  --color-stone-700: var(--ink-700);
+  --color-stone-800: var(--ink-800);
+  --color-stone-900: var(--ink);
+  --color-stone-950: var(--ink);
 }
 
-/* ── CSS custom properties ── */
+/* ── Tokens ─────────────────────────────────────────────────────────────── */
 :root {
-  --bg:              #F5F7FA;
-  --surface:         #FFFFFF;
-  --surface-raised:  #FFFFFF;
-  --surface-muted:   #F7FAFC;
-  --surface-accent:  #E8F5F2;
-  --border:          #E2E8F0;
-  --border-mid:      #CBD5E1;
-  --text-1:          #111827;
-  --text-2:          #4B5563;
-  --text-3:          #8A97A8;
-  --shadow-card:     0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px rgba(15, 23, 42, 0.05);
-  --shadow-lift:     0 16px 40px rgba(15, 23, 42, 0.10);
+  --bg:       #F6F4EF;   /* 米 rice paper */
+  --surface:  #FFFDFA;
+  --wash:     #F0ECE3;
+  --wash-2:   #E9E3D7;
+  --line:     #E3DCCD;
+  --line-2:   #D0C6B2;
+  --ink:      #3A3A35;
+  --ink-800:  #43433D;
+  --ink-700:  #4D4C46;
+  --ink-2:    #5C5B53;
+  --ink-3:    #6E6C63;
+  --ink-4:    #827F74;
+
+  --primary:       #52705A;   /* 鼠尾草 deep sage — buttons, links */
+  --primary-hover: #45604C;
+  --sage:          #6F8F72;   /* decorative sage */
+  --sand:          #D9C9A8;   /* 沙 */
+  --sand-deep:     #9A7B4B;   /* TCM accent text */
+  --mist:          #557A93;   /* 霧藍 Western data */
+  --good:          #6F8F72;
+  --good-deep:     #4E7356;
+  --honey:         #B98325;   /* caution */
+  --clay:          #B3613F;   /* elevated */
+  --brick:         #AE4237;   /* urgent */
+
+  --primary-wash: color-mix(in oklab, var(--primary) 9%, var(--surface));
+  --primary-line: color-mix(in oklab, var(--primary) 32%, var(--surface));
+  --sand-wash:    color-mix(in oklab, var(--sand) 30%, var(--surface));
+  --sand-line:    color-mix(in oklab, var(--sand) 75%, var(--surface));
+  --mist-wash:    color-mix(in oklab, var(--mist) 9%, var(--surface));
+
+  --shadow-soft: 0 1px 2px rgb(58 58 53 / .04), 0 10px 30px -18px rgb(58 58 53 / .18);
+
+  /* legacy names still referenced by components */
+  --border:     var(--line);
+  --border-mid: var(--line-2);
+  --text-1:     var(--ink);
+  --text-2:     var(--ink-2);
+  --text-3:     var(--ink-4);
+
   color-scheme: light;
 }
 
 html[data-theme="dark"] {
-  --bg:              #0E1523;
-  --surface:         #141E2D;
-  --surface-raised:  #182438;
-  --surface-muted:   #101927;
-  --surface-accent:  rgba(13, 122, 102, 0.18);
-  --border:          #26364A;
-  --border-mid:      #3C5068;
-  --text-1:          #F4F7FB;
-  --text-2:          #C9D3E1;
-  --text-3:          #8FA1B8;
-  --shadow-card:     0 1px 2px rgba(0, 0, 0, 0.20), 0 18px 40px rgba(0, 0, 0, 0.18);
-  --shadow-lift:     0 22px 50px rgba(0, 0, 0, 0.28);
+  --bg:       #1C1B18;
+  --surface:  #25241F;
+  --wash:     #2B2924;
+  --wash-2:   #322F29;
+  --line:     #3A3730;
+  --line-2:   #4B473E;
+  --ink:      #EDE8DD;
+  --ink-800:  #E1DCD0;
+  --ink-700:  #D3CDC0;
+  --ink-2:    #BFB9AC;
+  --ink-3:    #A8A295;
+  --ink-4:    #928C80;
+
+  --primary:       #9DBFA2;
+  --primary-hover: #B3CFB7;
+  --sage:          #86A78A;
+  --sand:          #8F7E5E;
+  --sand-deep:     #D3B887;
+  --mist:          #93B3C9;
+  --good:          #86A78A;
+  --good-deep:     #A3C4A7;
+  --honey:         #DDB25E;
+  --clay:          #DB8E6E;
+  --brick:         #E07D70;
+
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / .25);
+
   color-scheme: dark;
 }
 
-/* ── Safe area (notch / home indicator) ── */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-/* ── Base ── */
+/* ── Base ───────────────────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background:
-    linear-gradient(180deg, rgba(13, 122, 102, 0.055), transparent 360px),
-    var(--bg);
-  color: var(--text-1);
+  background-color: var(--bg);
+  color: var(--ink);
   font-family: var(--font-zh);
+  font-feature-settings: "tnum" 1;
+  line-height: 1.7;
+  overflow-wrap: break-word;   /* long URLs / IDs in AI text must not widen the page */
   min-height: 100vh;
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
@@ -89,46 +296,68 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* ── Touch targets (min 44px) ── */
-button, a, [role="button"] {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
+h1, h2, .font-display {
+  font-family: var(--font-display);
+  font-weight: 400;          /* Huninn ships a single, already-rounded weight */
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+}
+h3 { line-height: 1.45; }
+
+/* Text inputs share one calm style */
+@layer base {
+  input[type="text"], input[type="date"], input[type="email"], input[type="password"], textarea, select {
+    background: var(--surface);
+    border-color: var(--line);
+    color: var(--ink);
+  }
 }
 
-/* override for inline/text links */
-p a, li a, .text-link {
-  min-height: unset;
-  display: inline;
+/* ── Touch targets (min 44px) ──
+   In @layer base so utility classes (flex, grid, block…) on a link or
+   button still win; unlayered rules would override every utility. */
+@layer base {
+  button, a, [role="button"] {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  p a, .text-link {
+    min-height: unset;
+    display: inline;
+  }
 }
 
-/* ── Card ── */
-.glass-card {
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* ── Surfaces ── */
+.glass-card, .surface-card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
 }
 
-.text-balance {
-  text-wrap: balance;
+/* ── Breathing orb: 4 s in, 6 s out — slow breathing raises HRV ── */
+@keyframes breathe {
+  0%   { transform: scale(.78); }
+  40%  { transform: scale(1); }
+  100% { transform: scale(.78); }
 }
-
-.pb-section-title {
-  color: var(--text-1);
-  font-weight: 700;
-  letter-spacing: 0;
-}
+@keyframes breathe-label-in  { 0%, 38% { opacity: 1; } 42%, 100% { opacity: 0; } }
+@keyframes breathe-label-out { 0%, 38% { opacity: 0; } 42%, 96% { opacity: 1; } 100% { opacity: 0; } }
+.breath      { animation: breathe 10s ease-in-out infinite; transform-origin: center; }
+.breath-in   { animation: breathe-label-in 10s linear infinite; }
+.breath-out  { animation: breathe-label-out 10s linear infinite; }
 
 /* ── Scrollbar (desktop only) ── */
 @media (pointer: fine) {
-  ::-webkit-scrollbar        { width: 6px; height: 6px; }
+  ::-webkit-scrollbar        { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track  { background: var(--bg); }
-  ::-webkit-scrollbar-thumb  { background: var(--border-mid); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+  ::-webkit-scrollbar-thumb  { background: var(--line-2); border-radius: 4px; }
 }
 
-/* ── Progress bar: indeterminate (gzip 等無法取得精確進度時) ── */
+/* ── Progress bar: indeterminate ── */
 @keyframes pb-indeterminate {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
@@ -137,47 +366,44 @@ p a, li a, .text-link {
   width: 35%;
   height: 100%;
   border-radius: 9999px;
-  background: linear-gradient(90deg, var(--color-jade) 0%, var(--color-jade-mid) 50%, var(--color-jade) 100%);
+  background: var(--primary);
   animation: pb-indeterminate 1.35s ease-in-out infinite;
 }
 
-/* ── Constitution accent colors ── */
-.constitution-平和質 { --constitution-color: #16a34a; }
-.constitution-氣虛質 { --constitution-color: #d97706; }
-.constitution-陽虛質 { --constitution-color: #2563eb; }
-.constitution-陰虛質 { --constitution-color: #dc2626; }
-.constitution-痰濕質 { --constitution-color: #7c3aed; }
-.constitution-濕熱質 { --constitution-color: #ea580c; }
-.constitution-血瘀質 { --constitution-color: #9f1239; }
-.constitution-氣鬱質 { --constitution-color: #0891b2; }
-.constitution-特稟質 { --constitution-color: #c2410c; }
+/* ── Constitution accent colours ── */
+.constitution-平和質 { --constitution-color: var(--good-deep); }
+.constitution-氣虛質 { --constitution-color: var(--honey); }
+.constitution-陽虛質 { --constitution-color: var(--mist); }
+.constitution-陰虛質 { --constitution-color: var(--brick); }
+.constitution-痰濕質 { --constitution-color: #7A6A92; }
+.constitution-濕熱質 { --constitution-color: var(--clay); }
+.constitution-血瘀質 { --constitution-color: #8C4A5C; }
+.constitution-氣鬱質 { --constitution-color: #4F8584; }
+.constitution-特稟質 { --constitution-color: var(--sand-deep); }
 
 /* ── Streaming cursor ── */
-@keyframes cursor-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
-}
+@keyframes cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 .cursor-blink::after {
   content: '|';
   animation: cursor-blink 1s step-end infinite;
-  color: var(--color-jade);
+  color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .breath { animation: none; transform: scale(.9); }
+  .breath-in, .breath-out { animation: none; }
+  .breath-out { display: none; }
+  .pb-indeterminate-bar, .cursor-blink::after { animation: none; }
 }
 
 /* ── Focus ring ── */
 *:focus-visible {
-  outline: 2px solid var(--color-jade);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
-/* ── Prevent layout shift on scroll ── */
 @media (min-width: 768px) {
-  body {
-    overflow-y: scroll;
-  }
-}
-
-/* ── Smooth transitions ── */
-* {
-  -webkit-tap-highlight-color: transparent;
+  body { overflow-y: scroll; }
 }
