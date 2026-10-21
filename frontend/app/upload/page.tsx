@@ -16,6 +16,7 @@ import { useHealthData } from "@/hooks/useHealthData"
 import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { FileUp, CheckCircle2, AlertCircle } from "lucide-react"
+import { EcgCsvPicker } from "@/components/upload/EcgCsvPicker"
 
 // ── Drag-and-drop XML dropzone ──────────────────────────────────────
 function XmlDropzone({ onFile }: { onFile: (f: File) => void }) {
@@ -70,15 +71,20 @@ function StatusCard({ label, sub }: { label: string; sub?: string }) {
   )
 }
 
-// ── ECG CSV upload block ──────────────────────────────────────────────
+// ── Adding ECG CSVs to an existing check-in ───────────────────────────
 type EcgUploadState = "idle" | "uploading" | "done" | "error"
 
-function EcgCsvSection({ sessionId }: { sessionId: string }) {
-  const [ecgState,  setEcgState]  = useState<EcgUploadState>("idle")
-  const [ecgCount,  setEcgCount]  = useState(0)
-  const [ecgNote,   setEcgNote]   = useState("")
-  const [ecgError,  setEcgError]  = useState("")
-  const [dragging,  setDragging]  = useState(false)
+const ECG_EXPORT_STEPS = [
+  "在 iPhone「健康」App 點右上角頭像 →「輸出所有健康資料」，儲存到檔案",
+  "解壓縮匯出的 .zip，打開 apple_health_export 裡的 electrocardiograms 資料夾",
+  "每一次量測都是一個 CSV：拖進整個資料夾，或只選想看的幾個",
+]
+
+function EcgCsvSection({ sessionId, initialCount }: { sessionId: string; initialCount: number }) {
+  const [ecgState, setEcgState] = useState<EcgUploadState>("idle")
+  const [ecgCount, setEcgCount] = useState(initialCount)
+  const [ecgNote,  setEcgNote]  = useState("")
+  const [ecgError, setEcgError] = useState("")
 
   const upload = useCallback(async (files: File[]) => {
     setEcgState("uploading")
@@ -94,84 +100,42 @@ function EcgCsvSection({ sessionId }: { sessionId: string }) {
     }
   }, [sessionId])
 
-  const handleFiles = (files: FileList | null) => {
-    const csv = Array.from(files ?? []).filter((f) => f.name.toLowerCase().endsWith(".csv"))
-    if (csv.length) upload(csv)
-  }
-
   return (
     <Card className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-medium text-[var(--ink)]">加入心電圖（選填）</h3>
-          <p className="text-sm text-[var(--ink-3)] mt-0.5">
-            心電圖不在剛才的檔案裡，需要從「健康」App 另外匯出 CSV。
-          </p>
-        </div>
-        {ecgState === "done" && (
-          <span className="text-xs text-green-600 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-            已加入 {ecgCount} 筆
-          </span>
-        )}
+      <div>
+        <h3 className="font-medium text-[var(--ink)]">{initialCount ? "再加入其他心電圖（選填）" : "加入心電圖（選填）"}</h3>
+        <p className="text-sm text-[var(--ink-3)] mt-0.5">
+          {ecgCount > 0 ? `目前共有 ${ecgCount} 筆心電圖。` : "心電圖不在 export.xml 裡，是匯出檔中另外的 CSV。"}
+          重複的量測會自動合併。
+        </p>
       </div>
 
-      {/* How to export ECG */}
-      <div className="text-sm text-[var(--ink-3)] space-y-1 pb-3 border-b border-[var(--line)]">
-        {[
-          "開啟「健康」App → 瀏覽 → 心臟 → 心電圖",
-          "點選任一 ECG 記錄 → 右上角「匯出」",
-          "選擇「CSV」儲存",
-          "或使用 Health Auto Export App 批次匯出",
-        ].map((s, i) => (
-          <p key={i} className="flex gap-1.5">
-            <span className="text-[var(--primary)]">{i + 1}.</span>
-            <span>{s}</span>
-          </p>
-        ))}
-      </div>
+      {ecgCount === 0 && (
+        <ol className="text-sm text-[var(--ink-3)] space-y-1">
+          {ECG_EXPORT_STEPS.map((step, i) => (
+            <li key={i} className="flex gap-2"><span className="text-[var(--primary)]">{i + 1}.</span>{step}</li>
+          ))}
+        </ol>
+      )}
 
-      {ecgState === "idle" || ecgState === "error" ? (
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
-          className={cn(
-            "relative border border-dashed rounded-2xl p-6 text-center transition-colors cursor-pointer",
-            dragging ? "border-[var(--sand-deep)]/60 bg-[var(--sand-wash)]" : "border-gray-300 hover:border-gray-400 hover:bg-gray-50",
-          )}
-        >
-          <input
-            type="file"
-            accept=".csv"
-            multiple
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            onChange={(e) => handleFiles(e.target.files)}
-          />
-          <p className="text-[var(--ink-2)] text-[15px]">把心電圖 CSV 拖到這裡，或點一下選擇（可一次選多個）</p>
-          {ecgState === "error" && (
-            <p className="text-red-500 text-xs mt-2">{ecgError}</p>
-          )}
-        </div>
-      ) : ecgState === "uploading" ? (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200">
+      {ecgState === "uploading" ? (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[var(--wash)]">
           <Spinner size="sm" />
-          <p className="text-sm text-gray-500">解析 ECG CSV 中…</p>
+          <p className="text-sm text-[var(--ink-2)]">正在讀取心電圖…</p>
         </div>
       ) : (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-50 border border-green-200">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-          <div>
-            <p className="text-sm text-green-700">目前共有 {ecgCount} 筆心電圖，可以再加入其他檔案</p>
-            {ecgNote && <p className="text-sm text-[var(--ink-3)] mt-0.5">{ecgNote}</p>}
-          </div>
-          <button
-            onClick={() => { setEcgState("idle"); setEcgCount(0) }}
-            className="ml-auto text-xs text-gray-400 hover:text-gray-600"
-          >
-            重新上傳
-          </button>
-        </div>
+        <>
+          {ecgState === "done" && (
+            <div className="flex items-start gap-2 px-4 py-3 rounded-2xl bg-green-50">
+              <CheckCircle2 size={18} className="text-[var(--good-deep)] shrink-0 mt-0.5" aria-hidden />
+              <div>
+                <p className="text-sm text-[var(--ink)]">已加入，目前共有 {ecgCount} 筆心電圖。</p>
+                {ecgNote && <p className="text-sm text-[var(--ink-3)] mt-0.5">{ecgNote}</p>}
+              </div>
+            </div>
+          )}
+          <EcgCsvPicker compact onFiles={upload} error={ecgState === "error" ? ecgError : undefined} />
+        </>
       )}
     </Card>
   )
@@ -185,8 +149,13 @@ export default function UploadPage() {
     fileName, fileSizeMb, uploadSizeMb, uploadPercent, uploadLoaded, uploadTotal,
     extractPercent,
     scan, recordCounts,
-    uploadXml, extract, reset,
+    fileNames,
+    uploadXml, extract, uploadFiles, reset,
   } = useHealthData()
+
+  // "xml": full Apple Health export (recommended); "ecg": only ECG CSV files.
+  const [source, setSource] = useState<"xml" | "ecg">("xml")
+  const csvMode = fileNames.length > 0 && !scan
 
   const [startDate, setStartDate] = useState("")
   const [endDate,   setEndDate]   = useState("")
@@ -229,17 +198,51 @@ export default function UploadPage() {
         {/* ── STEP 1: file drop ── */}
         {state === "idle" && (
           <>
-            <XmlDropzone onFile={uploadXml} />
+            <div className="inline-flex w-full sm:w-auto rounded-full bg-[var(--wash-2)] p-1" role="tablist" aria-label="要上傳哪一種資料">
+              {([["xml", "完整匯出檔"], ["ecg", "只有心電圖 CSV"]] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={source === key}
+                  onClick={() => setSource(key)}
+                  className={cn(
+                    "flex-1 sm:flex-none justify-center px-5 rounded-full text-[15px] transition-colors",
+                    source === key ? "bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-soft)]" : "text-[var(--ink-3)]",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {source === "xml" ? (
+              <XmlDropzone onFile={uploadXml} />
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[15px] text-[var(--ink-2)]">
+                  不用上傳整個匯出檔，只用 Apple Watch 量的心電圖也能分析心律、心率與心率變異。
+                </p>
+                <EcgCsvPicker onFiles={uploadFiles} />
+              </div>
+            )}
 
             <section aria-labelledby="export-how" className="rounded-[20px] bg-[var(--sand-wash)] p-5 sm:p-6">
-              <h2 id="export-how" className="text-lg text-[var(--ink)]">還沒有檔案？在 iPhone 上這樣匯出</h2>
+              <h2 id="export-how" className="text-lg text-[var(--ink)]">
+                {source === "xml" ? "還沒有檔案？在 iPhone 上這樣匯出" : "心電圖 CSV 在哪裡？"}
+              </h2>
               <ol className="mt-4 grid sm:grid-cols-2 gap-x-6 gap-y-3">
-                {[
+                {(source === "xml" ? [
                   "打開「健康」App，點右上角的頭像",
                   "滑到最下面，點「輸出所有健康資料」",
                   "等它準備好，選「儲存到檔案」",
                   "解壓縮 .zip，上傳裡面的 export.xml",
-                ].map((s, i) => (
+                ] : [
+                  "打開「健康」App，點右上角頭像 →「輸出所有健康資料」",
+                  "選「儲存到檔案」，再解壓縮匯出的 .zip",
+                  "打開 apple_health_export 裡的 electrocardiograms 資料夾",
+                  "每次量測一個 CSV：整個資料夾拖進來，或只選幾個",
+                ]).map((s, i) => (
                   <li key={i} className="flex gap-3 text-[15px] text-[var(--ink-2)]">
                     <span className="grid place-items-center w-6 h-6 shrink-0 rounded-full bg-[var(--surface)] text-[var(--sand-deep)] font-display text-sm mt-0.5">
                       {i + 1}
@@ -358,15 +361,16 @@ export default function UploadPage() {
         {/* ── STEP 4: extracting ── */}
         {state === "extracting" && (
           <Card>
-            <p className="font-medium text-[var(--ink)]">正在讀取資料…</p>
+            <p className="font-medium text-[var(--ink)]">{csvMode ? "正在讀取心電圖…" : "正在讀取資料…"}</p>
             <p className="text-sm text-[var(--ink-3)] mt-1">
-              {startDate} 至 {endDate}，共 {selected.length} 種資料
+              {csvMode
+                ? `${fileNames.length} 個檔案，每筆心電圖約 30 秒的波形，檔案多時需要一點時間`
+                : `${startDate} 至 ${endDate}，共 ${selected.length} 種資料`}
             </p>
             <div className="mt-3">
-              <ProgressBar
-                value={extractPercent}
-                label={`${extractPercent}%`}
-              />
+              {csvMode
+                ? <ProgressBar indeterminate value={0} label="分析波形中" />
+                : <ProgressBar value={extractPercent} label={`${extractPercent}%`} />}
             </div>
           </Card>
         )}
@@ -396,7 +400,10 @@ export default function UploadPage() {
                 <div>
                   <p className="font-display text-xl text-[var(--ink)]">資料準備好了</p>
                   <p className="text-[15px] text-[var(--ink-2)] mt-1">
-                    共讀到 {Object.values(recordCounts).reduce((a, n) => a + n, 0).toLocaleString()} 筆紀錄。接下來花三分鐘，告訴我們你最近的身體感受。
+                    {csvMode
+                      ? `共讀到 ${health.ecg_readings.length} 筆心電圖。`
+                      : `共讀到 ${Object.values(recordCounts).reduce((a, n) => a + n, 0).toLocaleString()} 筆紀錄。`}
+                    接下來花三分鐘，告訴我們你最近的身體感受。
                   </p>
                 </div>
               </Card>
@@ -407,7 +414,7 @@ export default function UploadPage() {
 
             {sessionId && (
               <FadeIn delay={0.15}>
-                <EcgCsvSection sessionId={sessionId} />
+                <EcgCsvSection sessionId={sessionId} initialCount={health.ecg_readings.length} />
               </FadeIn>
             )}
 
