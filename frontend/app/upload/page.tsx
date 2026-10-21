@@ -76,15 +76,17 @@ type EcgUploadState = "idle" | "uploading" | "done" | "error"
 function EcgCsvSection({ sessionId }: { sessionId: string }) {
   const [ecgState,  setEcgState]  = useState<EcgUploadState>("idle")
   const [ecgCount,  setEcgCount]  = useState(0)
+  const [ecgNote,   setEcgNote]   = useState("")
   const [ecgError,  setEcgError]  = useState("")
   const [dragging,  setDragging]  = useState(false)
 
-  const upload = useCallback(async (file: File) => {
+  const upload = useCallback(async (files: File[]) => {
     setEcgState("uploading")
     setEcgError("")
     try {
-      const res = await api.addEcgCsv(sessionId, file)
+      const res = await api.addEcgCsvBatch(sessionId, files)
       setEcgCount(res.ecg_count)
+      setEcgNote(res.failed_files.length ? `有 ${res.failed_files.length} 個檔案讀不到心電圖：${res.failed_files.join("、")}` : "")
       setEcgState("done")
     } catch (e) {
       setEcgError(e instanceof Error ? e.message : "上傳失敗")
@@ -93,8 +95,8 @@ function EcgCsvSection({ sessionId }: { sessionId: string }) {
   }, [sessionId])
 
   const handleFiles = (files: FileList | null) => {
-    const csv = Array.from(files ?? []).find((f) => f.name.toLowerCase().endsWith(".csv"))
-    if (csv) upload(csv)
+    const csv = Array.from(files ?? []).filter((f) => f.name.toLowerCase().endsWith(".csv"))
+    if (csv.length) upload(csv)
   }
 
   return (
@@ -142,10 +144,11 @@ function EcgCsvSection({ sessionId }: { sessionId: string }) {
           <input
             type="file"
             accept=".csv"
+            multiple
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             onChange={(e) => handleFiles(e.target.files)}
           />
-          <p className="text-[var(--ink-2)] text-[15px]">把心電圖 CSV 拖到這裡，或點一下選擇</p>
+          <p className="text-[var(--ink-2)] text-[15px]">把心電圖 CSV 拖到這裡，或點一下選擇（可一次選多個）</p>
           {ecgState === "error" && (
             <p className="text-red-500 text-xs mt-2">{ecgError}</p>
           )}
@@ -158,7 +161,10 @@ function EcgCsvSection({ sessionId }: { sessionId: string }) {
       ) : (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-50 border border-green-200">
           <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-          <p className="text-sm text-green-700">已成功加入 {ecgCount} 筆 ECG 記錄</p>
+          <div>
+            <p className="text-sm text-green-700">目前共有 {ecgCount} 筆心電圖，可以再加入其他檔案</p>
+            {ecgNote && <p className="text-sm text-[var(--ink-3)] mt-0.5">{ecgNote}</p>}
+          </div>
           <button
             onClick={() => { setEcgState("idle"); setEcgCount(0) }}
             className="ml-auto text-xs text-gray-400 hover:text-gray-600"
@@ -189,10 +195,10 @@ export default function UploadPage() {
   const onScanReady = () => {
     if (!scan) return
     if (!startDate) {
-      const today = new Date()
-      const ninetyDaysAgo = new Date(today)
-      ninetyDaysAgo.setDate(today.getDate() - 90)
-      const defaultStart = ninetyDaysAgo.toISOString().slice(0, 10)
+      // Last 90 days *of the data*, so older exports still get a usable range.
+      const end = new Date(`${scan.maxDate}T00:00:00`)
+      end.setDate(end.getDate() - 90)
+      const defaultStart = end.toISOString().slice(0, 10)
       setStartDate(defaultStart > scan.minDate ? defaultStart : scan.minDate)
       setEndDate(scan.maxDate)
       setSelected(scan.availableTypes)
@@ -201,6 +207,12 @@ export default function UploadPage() {
   if (state === "configuring" && !startDate && scan) onScanReady()
 
   const canExtract = startDate && endDate && startDate <= endDate && selected.length > 0
+
+  // A small, anonymous sample export bundled with the site, for trying the flow.
+  const trySample = async () => {
+    const blob = await (await fetch("/sample-health-export.xml")).blob()
+    uploadXml(new File([blob], "sample-health-export.xml", { type: "text/xml" }))
+  }
 
   return (
     <PageWrapper maxWidth="md">
@@ -240,9 +252,12 @@ export default function UploadPage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-[20px] border border-[var(--line)] px-5 py-4">
               <p className="text-[15px] text-[var(--ink-2)]">沒有 Apple Watch，或想先看看？</p>
-              <Button variant="secondary" size="sm" onClick={() => router.push("/questionnaire")}>
-                略過，直接填問卷
-              </Button>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button variant="secondary" size="sm" onClick={trySample}>用範例資料試試看</Button>
+                <Button variant="ghost" size="sm" onClick={() => router.push("/questionnaire")}>
+                  略過，直接填問卷
+                </Button>
+              </div>
             </div>
           </>
         )}
