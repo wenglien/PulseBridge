@@ -171,11 +171,25 @@ export const api = {
   extractProgress: (sessionId: string): Promise<{ pct: number }> =>
     request(`/api/health-data/extract-progress/${sessionId}`, undefined, sessionId),
 
-  addEcgCsv: (sessionId: string, file: File): Promise<{ session_id: string; ecg_count: number }> => {
+  addEcgCsv: (sessionId: string, file: File): Promise<{ session_id: string; ecg_count: number; added_count?: number }> => {
     const form = new FormData()
     form.append("session_id", sessionId)
     form.append("file", file)
     return postForm("/api/health-data/add-ecg-csv", form, sessionId)
+  },
+
+  addEcgCsvBatch: (sessionId: string, files: File[]): Promise<{
+    session_id: string
+    ecg_count: number
+    added_count: number
+    file_count: number
+    parsed_file_count: number
+    failed_files: string[]
+  }> => {
+    const form = new FormData()
+    form.append("session_id", sessionId)
+    files.forEach((file) => form.append("files", file))
+    return postForm("/api/health-data/add-ecg-csv-batch", form, sessionId)
   },
 
   // Health data — CSV

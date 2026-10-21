@@ -17,6 +17,7 @@ backend/**/*.pyo
 backend/venv/
 backend/.venv/
 backend/data/          # session files, uploaded XMLs
+data/                  # local scratch / exported data
 backend/*.egg-info/
 backend/.pytest_cache/
 backend/.mypy_cache/
@@ -38,6 +39,7 @@ frontend/yarn-error.log*
 
 # ── IDE / tooling ─────────────────────────────────────────────────────────────
 .idea/
+.claude/
 .vscode/settings.json
 *.swp
 *.swo

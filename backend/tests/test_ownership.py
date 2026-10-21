@@ -227,3 +227,38 @@ def test_signing_in_claims_this_browsers_sessions(client):
     r = client.post("/api/sessions/claim", headers={"Authorization": f"Bearer {jwt2}"},
                     json={"sessions": [{"session_id": sid, "token": token}]})
     assert r.json()["claimed"] == []
+
+
+ECG_CSV = "Date,Classification,Average Heart Rate\n{ts},{cls},68\n"   # columnar export
+
+
+def test_ecg_batch_merges_and_dedupes(client):
+    r = client.post("/api/health-data/manual", json={"sdnn": 40, "rmssd": 30})
+    sid, tok = r.json()["session_id"], r.json()["session_token"]
+    csv_a = ECG_CSV.format(ts="2026-10-01 08:00:00 +0800", cls="Sinus Rhythm").encode()
+    csv_b = ECG_CSV.format(ts="2026-10-02 08:00:00 +0800", cls="Sinus Rhythm").encode()
+
+    files = [("files", ("a.csv", csv_a, "text/csv")), ("files", ("b.csv", csv_b, "text/csv"))]
+    assert client.post("/api/health-data/add-ecg-csv-batch", data={"session_id": sid}, files=files).status_code == 404
+    r = client.post("/api/health-data/add-ecg-csv-batch", data={"session_id": sid}, files=files, headers={H: tok})
+    assert r.status_code == 200, r.text
+    assert (r.json()["ecg_count"], r.json()["added_count"]) == (2, 2)
+
+    # Re-adding one of them is a no-op; the single-file route uses the same merge.
+    r = client.post("/api/health-data/add-ecg-csv", data={"session_id": sid},
+                    files={"file": ("a.csv", csv_a, "text/csv")}, headers={H: tok})
+    assert (r.json()["ecg_count"], r.json()["added_count"]) == (2, 0)
+
+
+def test_bundled_sample_export_extracts(client):
+    from pathlib import Path
+    sample = Path(__file__).resolve().parents[2] / "frontend/public/sample-health-export.xml"
+    r = client.post("/api/health-data/upload-xml", files={"file": ("sample-health-export.xml", sample.read_bytes(), "text/xml")})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    scan = body["scan"]
+    r = client.post("/api/health-data/extract", headers={H: body["session_token"]}, json={
+        "session_id": body["session_id"], "start_date": scan["min_date"], "end_date": scan["max_date"],
+        "data_types": scan["available_types"]})
+    assert r.status_code == 200, r.text
+    assert sum(r.json()["record_counts"].values()) > 0

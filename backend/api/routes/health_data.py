@@ -274,6 +274,10 @@ async def manual_input(
     return body
 
 
+_MAX_ECG_CSV_BYTES = 20 * 1024 * 1024
+_MAX_ECG_READINGS = 500
+
+
 @router.post("/add-ecg-csv")
 async def add_ecg_csv(
     session_id: str = Form(...),
@@ -281,33 +285,71 @@ async def add_ecg_csv(
     token: Optional[str] = Depends(session_token),
     user: Optional[UserRecord] = Depends(get_current_user_optional),
 ):
+    """Parse one ECG CSV and merge its readings into an existing session."""
+    return await add_ecg_csv_batch(session_id=session_id, files=[file], token=token, user=user)
+
+
+@router.post("/add-ecg-csv-batch")
+async def add_ecg_csv_batch(
+    session_id: str = Form(...),
+    files: List[UploadFile] = File(...),
+    token: Optional[str] = Depends(session_token),
+    user: Optional[UserRecord] = Depends(get_current_user_optional),
+):
     """
-    Parse an ECG CSV and merge the readings into an existing session.
-    The session must already exist (created by upload-xml/extract or upload-csv).
+    Parse one or more ECG CSV files and merge them into the session's readings.
+    Existing readings are kept; a reading with the same timestamp and
+    classification replaces the earlier copy instead of duplicating it.
     """
     await authorize_session(session_id, token, user)
     session = await load_payload(session_id)
     if "health" not in session:
         raise HTTPException(404, "這份紀錄還沒有健康資料，請先上傳 Apple Health 匯出檔")
+    if not files:
+        raise HTTPException(400, "請至少選擇一個 ECG CSV 檔案")
 
-    raw = await file.read()
-    if not raw:
-        raise HTTPException(400, "檔案是空的")
-    if len(raw) > 20 * 1024 * 1024:
-        raise HTTPException(400, "ECG CSV 超過 20 MB 限制")
+    records: list[dict] = []
+    parsed_files = 0
+    failed_files: list[str] = []
+    for upload in files:
+        raw = await upload.read()
+        if len(raw) > _MAX_ECG_CSV_BYTES:
+            raise HTTPException(400, f"{upload.filename} 超過 20 MB 限制")
+        parsed = parse_ecg_csv(raw) if raw else []
+        if parsed:
+            parsed_files += 1
+            records.extend(parsed)
+        else:
+            failed_files.append(upload.filename or "unknown.csv")
 
-    ecg_records = parse_ecg_csv(raw)
-    if not ecg_records:
-        raise HTTPException(400, "無法從此 CSV 讀取 ECG 資料，請確認欄位包含 Date 和 Classification")
+    if not records:
+        raise HTTPException(400, "無法從選取的 CSV 讀取 ECG 資料，請確認欄位包含 Date 和 Classification")
 
-    ecg_list = [ECGReading(**r) for r in ecg_records[:200]]
-
-    # Merge into existing health data
     health = session["health"]
-    health["ecg_readings"] = [r.model_dump() for r in ecg_list]
+    added, merged = _merge_ecg_readings(health.get("ecg_readings") or [], records)
+    health["ecg_readings"] = merged
     await update_session(session_id, {"health": health})
 
-    return {"session_id": session_id, "ecg_count": len(ecg_list)}
+    return {
+        "session_id": session_id,
+        "ecg_count": len(merged),
+        "added_count": added,
+        "file_count": len(files),
+        "parsed_file_count": parsed_files,
+        "failed_files": failed_files,
+    }
+
+
+def _merge_ecg_readings(existing: list[dict], new_records: list[dict]) -> tuple[int, list[dict]]:
+    """Merge by (timestamp, classification); returns (newly added count, merged list)."""
+    key = lambda r: (str(r.get("timestamp", "")), str(r.get("classification", "notDetermined")))  # noqa: E731
+    by_key = {key(r): r for r in existing}
+    before = len(by_key)
+    for record in new_records:
+        reading = ECGReading(**record).model_dump()
+        by_key[key(reading)] = reading
+    merged = sorted(by_key.values(), key=lambda r: str(r.get("timestamp", "")))[-_MAX_ECG_READINGS:]
+    return max(0, len(by_key) - before), merged
 
 
 # ---------------------------------------------------------------------------

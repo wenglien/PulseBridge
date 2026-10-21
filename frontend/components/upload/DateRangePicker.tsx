@@ -20,7 +20,7 @@ export function DateRangePicker({
           <p className="text-sm text-[var(--ink-3)] mt-0.5">
             檔案裡的資料從 {minDate}
             {" "}到{" "}
-            {maxDate}，預設為最近 90 天。
+            {maxDate}，預設為資料中最近的 90 天。
           </p>
         )}
       </div>
