@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 420" width="1280" height="420" role="img" aria-label="脈橋 PulseBridge — 同一次心跳，西醫數據與中醫調養一起讀">
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="30%" stop-color="#D9C9A8" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#D9C9A8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="36%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#B9CBB8"/>
+      <stop offset="78%" stop-color="#6F8F72"/>
+    </radialGradient>
+    <style>
+      .breath { transform-box: fill-box; transform-origin: center; animation: breathe 10s ease-in-out infinite; }
+      @keyframes breathe { 0% { transform: scale(.82) } 40% { transform: scale(1) } 100% { transform: scale(.82) } }
+      @media (prefers-reduced-motion: reduce) { .breath { animation: none; transform: scale(.92) } }
+      .display { font-family: "Huninn", "jf open 粉圓 2.0", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+      .body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, "Segoe UI", sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="420" rx="28" fill="#F6F4EF"/>
+
+  <!-- breathing orb: 4 s in, 6 s out, as in the app -->
+  <g transform="translate(1000 210)">
+    <circle class="breath" r="190" fill="url(#halo)"/>
+    <circle class="breath" r="118" fill="url(#orb)"/>
+  </g>
+
+  <!-- wordmark -->
+  <g transform="translate(88 0)">
+    <!-- logo: the app's mark, a sage disc with a darker crescent -->
+    <clipPath id="mark"><circle cx="22" cy="104" r="22"/></clipPath>
+    <g clip-path="url(#mark)">
+      <circle cx="22" cy="104" r="22" fill="#52705A"/>
+      <circle cx="18" cy="100" r="22" fill="#6F8F72"/>
+    </g>
+    <text x="60" y="117" class="display" font-size="38" fill="#3A3A35">脈橋</text>
+    <text x="150" y="116" class="body" font-size="22" fill="#827F74" letter-spacing="1">PulseBridge</text>
+
+    <text x="0" y="214" class="display" font-size="58" fill="#3A3A35">同一次心跳，</text>
+    <text x="0" y="288" class="display" font-size="58" fill="#3A3A35">兩種讀法。</text>
+
+    <text x="0" y="344" class="body" font-size="22" fill="#5C5B53">Apple Watch 的心電圖、心率變異與睡眠，加上身體感受，</text>
+    <text x="0" y="376" class="body" font-size="22" fill="#5C5B53">整理成西醫數據與中醫調養並列的一份報告。</text>
+  </g>
+</svg>
