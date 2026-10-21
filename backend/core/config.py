@@ -9,7 +9,7 @@ DEFAULT_JWT_SECRET = "change-me-generate-a-strong-random-secret"
 class Settings(BaseSettings):
     # LLM
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"   # llama-3.3-70b was retired by Groq
 
     # Storage
     data_dir: str = "./data"
