@@ -122,12 +122,18 @@ def _find_col(headers: list[str], keywords: list[str]) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 _NATIVE_MARKERS = ("記錄日期", "取樣頻率", "導程", "赫茲", "分類")
+# English exports label the same metadata rows; match them as the row's first
+# cell only, since a columnar CSV may have "Classification" as a column header.
+_NATIVE_ROW_KEYS_EN = {"recorded date", "sample rate", "lead", "unit"}
 
 
 def _is_native_apple_ecg(text: str) -> bool:
-    """Return True if the text looks like a native Apple Watch ECG export."""
-    head = "\n".join(text.splitlines()[:30])
-    return any(m in head for m in _NATIVE_MARKERS)
+    """Return True if the text looks like a native Apple Watch ECG export (any UI language)."""
+    head_lines = text.splitlines()[:30]
+    if any(m in line for line in head_lines for m in _NATIVE_MARKERS):
+        return True
+    first_cells = {line.split(",", 1)[0].strip().strip('"').lower() for line in head_lines}
+    return len(first_cells & _NATIVE_ROW_KEYS_EN) >= 2
 
 
 def detect_csv_type(content: bytes) -> str:
@@ -295,6 +301,8 @@ def _parse_columnar_ecg(text: str) -> list[dict]:
         ts  = _parse_date(row.get(date_col, "")) if date_col else ""
         cls = _normalize_ecg_class(row.get(cls_col, "") if cls_col else "")
         hr  = _safe_float(row.get(hr_col, "0") if hr_col else "0")
+        if not ts:
+            continue  # not an ECG row (blank line, footer, or a file this parser does not understand)
         out.append({
             "timestamp":            ts,
             "average_heart_rate":   hr,
