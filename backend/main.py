@@ -1,22 +1,42 @@
 from __future__ import annotations
 """PulseBridge FastAPI application."""
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from core.config import settings
-from db.base import init_db
+from core.config import DEFAULT_JWT_SECRET, check_production_secrets, settings
+from db.store import get_store
 from api.routes import health_data, questionnaire, analysis, sessions
 from api.routes import auth, healthkit
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger("pulsebridge")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    check_production_secrets()
+    get_store()  # connect / create tables once, before the first request
+    logger.info("Storage backend: %s", settings.storage_backend)
+    if settings.jwt_secret == DEFAULT_JWT_SECRET:
+        logger.warning("JWT_SECRET is the default placeholder — set a strong secret before deploying.")
+    if not settings.groq_api_key:
+        logger.warning("GROQ_API_KEY is not set — analysis and chat endpoints will fail.")
+    yield
+
 
 app = FastAPI(
     title="PulseBridge API",
     description="AI 中西醫數位健康助理",
     version="2.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o for o in settings.cors_origins_list if o],
+    allow_origins=settings.cors_origins_list,
     # Optional regex for Firebase Hosting previews or other dynamic origins.
     # Set CORS_ORIGIN_REGEX in your .env to enable (leave blank to disable).
     allow_origin_regex=settings.cors_origin_regex or None,
@@ -24,11 +44,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-async def startup_event():
-    init_db()
 
 
 app.include_router(health_data.router, prefix="/api")

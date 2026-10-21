@@ -2,14 +2,19 @@ from __future__ import annotations
 """Health data upload (CSV / XML) and retrieval routes."""
 import asyncio
 import gzip
-import shutil
 from pathlib import Path
-from typing import List
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from typing import List, Optional
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from datetime import datetime
 
-from api.dependencies import generate_session_id, save_session, load_session
+from api.auth_deps import get_current_user_optional
+from api.dependencies import (
+    NOT_FOUND, authorize_session, create_session, load_payload, require_session,
+    run_store, session_token, update_session,
+)
+from db.store import SessionMeta, UserRecord, get_store
 from core.config import settings
+from core.rate_limit import LIMIT_CREATE
 from core.csv_parser import (
     detect_csv_type,
     parse_ecg_csv,
@@ -29,15 +34,64 @@ from models.health_data import (
 
 router = APIRouter(prefix="/health-data", tags=["health-data"])
 
-_MAX_CSV_BYTES = 20 * 1024 * 1024  # 20 MB per file
+_MAX_CSV_BYTES = settings.max_csv_file_size_mb * 1024 * 1024
 
-# In-memory progress map for XML extract; keyed by session_id, value in [0, 1].
-# Single-process only — good enough for local / single-worker deployments.
-_extract_progress: dict[str, float] = {}
+class _XmlTooLarge(Exception):
+    pass
 
 
-@router.post("/upload-csv")
-async def upload_csv(files: List[UploadFile] = File(...)):
+def _max_xml_bytes() -> int:
+    return settings.max_xml_size_mb * 1024 * 1024
+
+
+def _gunzip_capped(src_path: Path, dst_path: Path, max_bytes: int) -> None:
+    """Decompress src → dst, aborting once output exceeds max_bytes (gzip-bomb guard)."""
+    written = 0
+    with gzip.open(src_path, "rb") as src, open(dst_path, "wb") as dst:
+        while chunk := src.read(1024 * 1024):
+            written += len(chunk)
+            if written > max_bytes:
+                raise _XmlTooLarge()
+            dst.write(chunk)
+
+
+GZIP_MAGIC = b"\x1f\x8b"
+
+
+def _cache_path(session_id: str) -> Path:
+    """Decompressed export.xml on this instance's local disk (a cache, not the source of truth)."""
+    return settings.uploads_dir / f"{session_id}.xml"
+
+
+def _ensure_local_xml(session_id: str) -> Optional[Path]:
+    """
+    Return a local, decompressed copy of the session's export. On Cloud Run the
+    request may land on a different instance than the upload did, so fall back
+    to the copy kept in the store.
+    """
+    cache = _cache_path(session_id)
+    if cache.exists():
+        return cache
+    fetched = settings.uploads_dir / f"{session_id}.fetched"
+    if not get_store().fetch_upload(session_id, fetched):
+        return None
+    try:
+        with open(fetched, "rb") as f:
+            is_gz = f.read(2) == GZIP_MAGIC
+        if is_gz:
+            _gunzip_capped(fetched, cache, _max_xml_bytes())
+        else:
+            fetched.replace(cache)
+    finally:
+        fetched.unlink(missing_ok=True)
+    return cache
+
+
+@router.post("/upload-csv", dependencies=[Depends(LIMIT_CREATE)])
+async def upload_csv(
+    files: List[UploadFile] = File(...),
+    user: Optional[UserRecord] = Depends(get_current_user_optional),
+):
     """
     Accept one or more CSV files (ECG, Heart Rate, HRV).
     File type is auto-detected from column headers.
@@ -54,7 +108,7 @@ async def upload_csv(files: List[UploadFile] = File(...)):
         if not raw:
             continue
         if len(raw) > _MAX_CSV_BYTES:
-            raise HTTPException(400, f"{f.filename} 超過 20MB 限制")
+            raise HTTPException(400, f"{f.filename} 超過 {settings.max_csv_file_size_mb}MB 限制")
 
         csv_type = detect_csv_type(raw)
 
@@ -78,7 +132,7 @@ async def upload_csv(files: List[UploadFile] = File(...)):
     if not ecg_records and not hr_records and not hrv_sdnn_records:
         raise HTTPException(400, "無法從上傳的檔案中讀取任何健康資料，請確認欄位格式正確")
 
-    session_id = generate_session_id()
+    session_id, new_token = await create_session(user=user, source="csv")
 
     # --- Compute HRV ---
     hrv_data: HRVMetrics | None = None
@@ -145,18 +199,27 @@ async def upload_csv(files: List[UploadFile] = File(...)):
         resting_heart_rate=resting_hr,
     )
 
-    save_session(session_id, {
+    await update_session(session_id, {
         "health": health_data.model_dump(),
         "status": "health_uploaded",
     })
 
-    return {"session_id": session_id, "parsed": health_data.model_dump()}
+    return {"session_id": session_id, "session_token": new_token, "parsed": health_data.model_dump()}
 
 
-@router.post("/manual")
-async def manual_input(data: ManualHealthInput):
-    """Create a session from manually entered health metrics."""
-    session_id = data.session_id or generate_session_id()
+@router.post("/manual", dependencies=[Depends(LIMIT_CREATE)])
+async def manual_input(
+    data: ManualHealthInput,
+    token: Optional[str] = Depends(session_token),
+    user: Optional[UserRecord] = Depends(get_current_user_optional),
+):
+    """Add manually entered metrics to an owned session, or start a new one."""
+    new_token = None
+    if data.session_id:
+        await authorize_session(data.session_id, token, user)
+        session_id = data.session_id
+    else:
+        session_id, new_token = await create_session(user=user, source="manual")
 
     hrv_data: HRVMetrics | None = None
     if data.sdnn > 0:
@@ -200,26 +263,32 @@ async def manual_input(data: ManualHealthInput):
         stress_level=data.stress_level,
     )
 
-    save_session(session_id, {
+    await update_session(session_id, {
         "health": health_data.model_dump(),
         "status": "health_uploaded",
     })
 
-    return {"session_id": session_id, "data": health_data.model_dump()}
+    body = {"session_id": session_id, "data": health_data.model_dump()}
+    if new_token:
+        body["session_token"] = new_token
+    return body
 
 
 @router.post("/add-ecg-csv")
 async def add_ecg_csv(
-    session_id: str = File(...),
+    session_id: str = Form(...),
     file: UploadFile = File(...),
+    token: Optional[str] = Depends(session_token),
+    user: Optional[UserRecord] = Depends(get_current_user_optional),
 ):
     """
     Parse an ECG CSV and merge the readings into an existing session.
     The session must already exist (created by upload-xml/extract or upload-csv).
     """
-    session = load_session(session_id)
-    if not session or "health" not in session:
-        raise HTTPException(404, "Session not found — please upload health data first")
+    await authorize_session(session_id, token, user)
+    session = await load_payload(session_id)
+    if "health" not in session:
+        raise HTTPException(404, "這份紀錄還沒有健康資料，請先上傳 Apple Health 匯出檔")
 
     raw = await file.read()
     if not raw:
@@ -236,7 +305,7 @@ async def add_ecg_csv(
     # Merge into existing health data
     health = session["health"]
     health["ecg_readings"] = [r.model_dump() for r in ecg_list]
-    save_session(session_id, {"health": health})
+    await update_session(session_id, {"health": health})
 
     return {"session_id": session_id, "ecg_count": len(ecg_list)}
 
@@ -245,13 +314,16 @@ async def add_ecg_csv(
 # XML upload / scan / extract  (large file, memory-safe streaming)
 # ---------------------------------------------------------------------------
 
-@router.post("/upload-xml")
-async def upload_xml(file: UploadFile = File(...)):
+@router.post("/upload-xml", dependencies=[Depends(LIMIT_CREATE)])
+async def upload_xml(
+    file: UploadFile = File(...),
+    user: Optional[UserRecord] = Depends(get_current_user_optional),
+):
     """
-    Save the Apple Health XML to disk in 1 MB chunks (memory-safe).
-    Accepts plain .xml or browser-gzipped .xml.gz (gzip deflate).
-    After upload, .gz is decompressed to {session_id}.xml for scan/extract.
-    Returns session_id、檔案大小，以及同請求內完成的 scan（日期區間與可用類型）。
+    Save the Apple Health export (.xml, or browser-gzipped .xml.gz) in 1 MB
+    chunks, keep a copy in the store, and scan it in the same request.
+    Returns the new session's id and access token plus the scan result
+    (date range and available data types).
     """
     name = (file.filename or "").lower()
     is_gz = name.endswith(".gz")
@@ -260,47 +332,46 @@ async def upload_xml(file: UploadFile = File(...)):
     if not (is_xml or is_gz):
         raise HTTPException(400, "請上傳 .xml 或 .xml.gz（gzip 壓縮）格式的 Apple Health 匯出檔案")
 
-    session_id = generate_session_id()
-    upload_dir = settings.uploads_dir
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    xml_path = upload_dir / f"{session_id}.xml"
-
+    session_id, new_token = await create_session(user=user, source="xml")
+    settings.uploads_dir.mkdir(parents=True, exist_ok=True)
+    xml_path = _cache_path(session_id)
+    incoming = settings.uploads_dir / f"{session_id}.incoming"
+    limit = _max_xml_bytes()
     upload_bytes = 0
 
-    if is_gz:
-        gz_path = upload_dir / f"{session_id}.xml.gz"
-        with open(gz_path, "wb") as gz_f:
+    try:
+        target = incoming if is_gz else xml_path
+        with open(target, "wb") as f:
             while chunk := await file.read(1024 * 1024):
-                gz_f.write(chunk)
                 upload_bytes += len(chunk)
-        try:
-            with gzip.open(gz_path, "rb") as src, open(xml_path, "wb") as dst:
-                shutil.copyfileobj(src, dst, length=1024 * 1024)
-        except (OSError, EOFError) as e:
-            gz_path.unlink(missing_ok=True)
-            xml_path.unlink(missing_ok=True)
-            raise HTTPException(400, f"無法解壓縮 gzip 檔案：{e}") from e
-        gz_path.unlink(missing_ok=True)
-        xml_size = xml_path.stat().st_size
-    else:
-        with open(xml_path, "wb") as f:
-            while chunk := await file.read(1024 * 1024):
+                if upload_bytes > limit:
+                    raise HTTPException(413, f"檔案超過 {settings.max_xml_size_mb}MB 上限，請縮短匯出日期範圍")
                 f.write(chunk)
-                upload_bytes += len(chunk)
-        xml_size = xml_path.stat().st_size
 
-    save_session(session_id, {
-        "xml_path": str(xml_path),
-        "status":   "xml_uploaded",
-    })
+        if is_gz:
+            try:
+                await asyncio.to_thread(_gunzip_capped, incoming, xml_path, limit)
+            except _XmlTooLarge as e:
+                raise HTTPException(413, f"解壓縮後超過 {settings.max_xml_size_mb}MB 上限，請縮短匯出日期範圍") from e
+            except (OSError, EOFError) as e:
+                raise HTTPException(400, f"無法解壓縮 gzip 檔案：{e}") from e
 
-    # 與 GET /scan 分開的第二個請求在 Cloud Run 滾動更新／多實例時可能打到不同容器，
-    # 本機 SQLite + 磁碟會出現「session 不存在」404。掃描與上傳同一請求內完成可避免該競態。
+        # Keep the (smaller) file as received so any instance can extract later.
+        await run_store(get_store().put_upload, session_id, target)
+    except BaseException:
+        xml_path.unlink(missing_ok=True)
+        await run_store(get_store().delete_session, session_id)
+        raise
+    finally:
+        incoming.unlink(missing_ok=True)
+
+    await update_session(session_id, {"status": "xml_uploaded"})
     scan_payload = await asyncio.to_thread(scan_file, xml_path)
 
     return {
         "session_id":         session_id,
-        "file_size_mb":       round(xml_size / 1024 / 1024, 1),
+        "session_token":      new_token,
+        "file_size_mb":       round(xml_path.stat().st_size / 1024 / 1024, 1),
         "upload_size_mb":     round(upload_bytes / 1024 / 1024, 1),
         "was_gzip_upload":    is_gz,
         "scan":               scan_payload,
@@ -308,57 +379,54 @@ async def upload_xml(file: UploadFile = File(...)):
 
 
 @router.get("/scan/{session_id}")
-async def scan_xml(session_id: str):
-    """
-    Fast byte-level scan: return date range + available data types.
-    Runs in a thread pool to avoid blocking the event loop.
-    """
-    session = load_session(session_id)
-    if not session or "xml_path" not in session:
-        raise HTTPException(404, "Session not found or XML not uploaded")
-
-    xml_path = Path(session["xml_path"])
-    if not xml_path.exists():
-        raise HTTPException(404, "XML file not found on server")
+async def scan_xml(meta: SessionMeta = Depends(require_session)):
+    """Fast byte-level scan: return date range + available data types."""
+    xml_path = await asyncio.to_thread(_ensure_local_xml, meta.id)
+    if xml_path is None:
+        raise HTTPException(404, "找不到上傳的檔案，請重新上傳")
 
     result = await asyncio.to_thread(scan_file, xml_path)
     return result
 
 
 @router.post("/extract")
-async def extract_xml(body: ExtractRequest):
+async def extract_xml(
+    body: ExtractRequest,
+    token: Optional[str] = Depends(session_token),
+    user: Optional[UserRecord] = Depends(get_current_user_optional),
+):
     """
     Streaming iterparse extraction: only reads records matching
     the requested data types and date range.
     """
-    session = load_session(body.session_id)
-    if not session or "xml_path" not in session:
-        raise HTTPException(404, "Session not found or XML not uploaded")
-
-    xml_path = Path(session["xml_path"])
-    if not xml_path.exists():
-        raise HTTPException(404, "XML file not found on server")
-
+    await authorize_session(body.session_id, token, user)
     if not body.data_types:
         raise HTTPException(400, "請選擇至少一個資料類型")
 
-    # Progress callback: stores latest pct in a module-level dict for polling.
-    _extract_progress[body.session_id] = 0.0
-    def _on_progress(pct: float) -> None:
-        _extract_progress[body.session_id] = pct
+    xml_path = await asyncio.to_thread(_ensure_local_xml, body.session_id)
+    if xml_path is None:
+        raise HTTPException(404, "找不到上傳的檔案，請重新上傳")
 
-    # Run CPU-intensive parsing in thread pool
-    try:
-        raw = await asyncio.to_thread(
-            extract_records,
-            xml_path,
-            body.start_date,
-            body.end_date,
-            body.data_types,
-            _on_progress,
-        )
-    finally:
-        _extract_progress[body.session_id] = 1.0
+    store = get_store()
+    await run_store(store.set_progress, body.session_id, 0.0)
+    last_reported = [0.0]
+
+    def _on_progress(pct: float) -> None:
+        # Runs in the worker thread. Persisted (not in memory) so polling works
+        # across instances; throttled to keep store writes cheap.
+        if pct - last_reported[0] >= 0.05:
+            last_reported[0] = pct
+            store.set_progress(body.session_id, pct)
+
+    raw = await asyncio.to_thread(
+        extract_records,
+        xml_path,
+        body.start_date,
+        body.end_date,
+        body.data_types,
+        _on_progress,
+    )
+    await run_store(store.set_progress, body.session_id, 1.0)
 
     # ── HRV ──────────────────────────────────────────────────────────────
     hrv_data: HRVMetrics | None = None
@@ -426,10 +494,13 @@ async def extract_xml(body: ExtractRequest):
     # Record counts for the UI
     counts = {k: len(v) for k, v in raw.items() if v}
 
-    save_session(body.session_id, {
+    await update_session(body.session_id, {
         "health": health_data.model_dump(),
         "status": "health_uploaded",
     })
+    # The export is no longer needed once its data is in the session.
+    xml_path.unlink(missing_ok=True)
+    await run_store(store.delete_upload, body.session_id)
 
     return {
         "session_id": body.session_id,
@@ -439,15 +510,15 @@ async def extract_xml(body: ExtractRequest):
 
 
 @router.get("/extract-progress/{session_id}")
-async def extract_progress(session_id: str):
+async def extract_progress(meta: SessionMeta = Depends(require_session)):
     """Return the latest extract progress pct in [0, 1] for the given session."""
-    return {"pct": _extract_progress.get(session_id, 0.0)}
+    return {"pct": meta.progress}
 
 
 # 必須註冊在 /scan/、/extract 等固定路徑之後，否則「scan」會被當成 {session_id}
 @router.get("/{session_id}")
-async def get_health_data(session_id: str):
-    session = load_session(session_id)
-    if not session or "health" not in session:
-        raise HTTPException(404, "Session not found or health data missing")
+async def get_health_data(meta: SessionMeta = Depends(require_session)):
+    session = await load_payload(meta.id)
+    if "health" not in session:
+        raise HTTPException(404, NOT_FOUND)
     return session["health"]
